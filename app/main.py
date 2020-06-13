@@ -1,15 +1,14 @@
 #Python libraries that we need to import for our bot
 import random
 from flask import Flask, request
-from pymessenger.bot import Bot
 from .config import ACCTOKEN,VERTOKEN
 import requests
+import logging
 
 app = Flask(__name__)
-FB_API_URL = 'https://graph.facebook.com/v2.6/me/messages'
+FB_API_URL = 'https://graph.facebook.com/v7.0/me/messages'
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
-bot = Bot(ACCESS_TOKEN)
 
 #We will receive messages that Facebook sends our bot at this endpoint 
 @app.route("/", methods=['GET', 'POST'])
@@ -36,6 +35,10 @@ def receive_message():
                 if message['message'].get('attachments'):
                     response_sent_nontext = get_message()
                     send_message(recipient_id, response_sent_nontext)
+            elif message.get('postback'):
+            	recipient_id = message['sender']['id']
+            	handle_postback(recipient_id,message['postback'])
+
     return "Message Processed"
 
 
@@ -45,6 +48,32 @@ def verify_fb_token(token_sent):
     if token_sent == VERIFY_TOKEN:
         return request.args.get("hub.challenge")
     return 'Invalid verification token'
+
+def handle_postback(recipient_id,text):
+	data = {
+	  "recipient":{
+	    "id": recipient_id
+	  },
+	  "messaging_type": "RESPONSE",
+	  "message":{
+	    "text": "Pick a color:",
+	    "quick_replies":[
+	      {
+	        "content_type":"text",
+	        "title":"Red",
+	        "payload":"red",
+	        "image_url":"https://images-eu.ssl-images-amazon.com/images/I/31oIZDvTgFL._SY300_QL70_ML2_.jpg"
+	      },{
+	        "content_type":"text",
+	        "title":"Green",
+	        "payload":"green",
+	        "image_url":"https://lh3.googleusercontent.com/proxy/4thAzIZQcMhIFwcHQbN6j6OwzoyC-UyHmtxXCn-t5fOMgzZd7oAy4SAfSFMSZDcw1aBjSotVXnw2HDg3v6JKFqahdqu77yFtcqKPJ8iIFWAYLw"
+	      }
+	    ]
+	  }
+	}
+	response = requests.post(FB_API_URL, headers=headers, params=params, data=data)
+	return "success"
 
 
 #chooses a random message to send to the user
