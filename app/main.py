@@ -2,7 +2,7 @@
 import random
 from flask import Flask, request
 from pymessenger.bot import Bot
-from .config import ACCTOKEN,VERTOKEN
+from config import ACCTOKEN,VERTOKEN
 import requests
 
 app = Flask(__name__)
@@ -49,9 +49,39 @@ def verify_fb_token(token_sent):
 
 #chooses a random message to send to the user
 def get_message():
-    sample_responses = ["You are stunning!", "We're proud of you.", "Keep on being you!", "We're greatful to know you :)"]
+    sample_user_msg = ["COVID19","Narendra Modi","Nasarg","Donald Trunp"]
+    # sample_responses = ["You are stunning!", "We're proud of you.", "Keep on being you!", "We're greatful to know you :)"]
     # return selected item to the user
-    return random.choice(sample_responses)
+    response = find_related_urls(random.choice(sample_user_msg))
+    return random.choice(response)
+
+def find_related_urls(title):
+    """
+    args: title of article
+    returns: links of  most related articles from trusted sources
+    """
+    try: 
+        from googlesearch import search 
+    except ImportError:  
+        print("No module named 'google' found")  
+    print(title)
+    st = " "
+    related_urls = []
+    # to search 
+    query1 = "ndtv: "+ title
+    query2 = "timesofindia: "+title
+    query3 = "hindustantimes: " + title
+    for q in search(query1, tld="com", num=10, stop=1, pause=2): 
+        st += q
+        st += "\n"
+        
+    for r in search(query2, tld="co.in", num=10, stop=1, pause=2): 
+        st += r
+        st += "\n"
+    for s in search(query3, tld="com", num=10, stop=1, pause=2): 
+        st += s
+        st += "\n"
+    return st
 
 #uses PyMessenger to send response to user
 def send_message(recipient_id, text):
@@ -70,24 +100,6 @@ def send_message(recipient_id, text):
     auth = {
         'access_token': ACCESS_TOKEN
     }
-    # payload = {
-    #     "recipient":{
-    #         "id":"recipient_id"
-    #     },
-    #     "messaging_type": "RESPONSE",
-    #     "message":{
-    #         "text": "Pick a color:",
-    #         "quick_replies":[
-    #         {
-    #             "content_type":"text",
-    #             "title":"Red",
-    #         },{
-    #             "content_type":"text",
-    #             "title":"Green",
-    #         }
-    #         ]
-    #     }
-    #     }
 
     response = requests.post(
         FB_API_URL,
