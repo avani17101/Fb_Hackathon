@@ -3,10 +3,9 @@ import random
 from flask import Flask, request
 from .config import ACCTOKEN,VERTOKEN
 import requests
-import logging
 
 app = Flask(__name__)
-FB_API_URL = 'https://graph.facebook.com/v7.0/me/messages'
+FB_API_URL = 'https://graph.facebook.com/v2.6/me/messages'
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
 
@@ -22,6 +21,7 @@ def receive_message():
     else:
         # get whatever message a user sent the bot
        output = request.get_json()
+       print (output)
        for event in output['entry']:
           messaging = event['messaging']
           for message in messaging:
@@ -30,14 +30,14 @@ def receive_message():
                 recipient_id = message['sender']['id']
                 if message['message'].get('text'):
                     response_sent_text = get_message()
-                    send_message(recipient_id, response_sent_text)
+                    send_message(recipient_id, response_sent_text, message['message'])
                 #if user sends us a GIF, photo,video, or any other non-text item
                 if message['message'].get('attachments'):
                     response_sent_nontext = get_message()
                     send_message(recipient_id, response_sent_nontext)
             elif message.get('postback'):
-            	recipient_id = message['sender']['id']
-            	handle_postback(recipient_id,message['postback'])
+                recipient_id = message['sender']['id']
+                handle_postback(recipient_id,message['postback'])
 
     return "Message Processed"
 
@@ -50,52 +50,77 @@ def verify_fb_token(token_sent):
     return 'Invalid verification token'
 
 def handle_postback(recipient_id,text):
-	data = {
-	  "recipient":{
-	    "id": recipient_id
-	  },
-	  "messaging_type": "RESPONSE",
-	  "message":{
-	    "text": "Pick a color:",
-	    "quick_replies":[
-	      {
-	        "content_type":"text",
-	        "title":"Red",
-	        "payload":"red",
-	        "image_url":"https://images-eu.ssl-images-amazon.com/images/I/31oIZDvTgFL._SY300_QL70_ML2_.jpg"
-	      },{
-	        "content_type":"text",
-	        "title":"Green",
-	        "payload":"green",
-	        "image_url":"https://lh3.googleusercontent.com/proxy/4thAzIZQcMhIFwcHQbN6j6OwzoyC-UyHmtxXCn-t5fOMgzZd7oAy4SAfSFMSZDcw1aBjSotVXnw2HDg3v6JKFqahdqu77yFtcqKPJ8iIFWAYLw"
-	      }
-	    ]
-	  }
-	}
-	response = requests.post(FB_API_URL, headers=headers, params=params, data=data)
-	return "success"
+    payload = text['payload']
+    if payload == "red":
+        send_message(recipient_id, "You chose red", "")
+    elif payload == "green":
+        send_message(recipient_id, "You chose green", "")
 
 
 #chooses a random message to send to the user
 def get_message():
-    sample_responses = ["You are stunning!", "We're proud of you.", "Keep on being you!", "We're greatful to know you :)"]
+    sample_responses = ["You are a dirty fellow!", "Of course I talk like an idiot. How else would u understand me?", "I made a pencil with two erasers. It was pointless.", "What's brown and sticky? A stick."]
     # return selected item to the user
     return random.choice(sample_responses)
 
 #uses PyMessenger to send response to user
-def send_message(recipient_id, text):
+def send_message(recipient_id, text, message_rec):
     #sends user the text message provided via input response parameter
     """Send a response to Facebook"""
-    payload = {
-        'message': {
-            'text': text
+    if(message_rec['text'] == "color"):
+        payload = {
+        "recipient":{
+            "id": recipient_id
         },
-        'recipient': {
-            'id': recipient_id
-        },
-        'notification_type': 'regular'
-    }
-
+        "messaging_type": "RESPONSE",
+        "message":{
+            "text": "Pick a color:",
+            "quick_replies":[
+            {
+                "content_type":"text",
+                "title":"Red",
+                "payload":"red",
+                "image_url":"https://images-eu.ssl-images-amazon.com/images/I/31oIZDvTgFL._SY300_QL70_ML2_.jpg"
+            },{
+                "content_type":"text",
+                "title":"Green",
+                "payload":"green",
+                "image_url":"https://lh3.googleusercontent.com/proxy/4thAzIZQcMhIFwcHQbN6j6OwzoyC-UyHmtxXCn-t5fOMgzZd7oAy4SAfSFMSZDcw1aBjSotVXnw2HDg3v6JKFqahdqu77yFtcqKPJ8iIFWAYLw"
+            }
+            ]
+        }
+        }
+    elif message_rec.get('quick_reply'):
+        if message_rec['quick_reply']['payload'] == 'red':
+            payload = {
+                'message': {
+                    'text': "You chose red"
+                },
+                'recipient': {
+                    'id': recipient_id
+                },
+                'notification_type': 'regular'
+            }
+        elif message_rec['quick_reply']['payload'] == 'green':
+            payload = {
+                'message': {
+                    'text': "You chose green"
+                },
+                'recipient': {
+                    'id': recipient_id
+                },
+                'notification_type': 'regular'
+            }
+    else:
+        payload = {
+            'message': {
+                'text': text
+            },
+            'recipient': {
+                'id': recipient_id
+            },
+            'notification_type': 'regular'
+        }
     auth = {
         'access_token': ACCESS_TOKEN
     }
