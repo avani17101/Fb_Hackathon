@@ -3,8 +3,10 @@ import random
 from flask import Flask, request
 from pymessenger.bot import Bot
 from .config import ACCTOKEN,VERTOKEN
+import requests
 
 app = Flask(__name__)
+FB_API_URL = 'https://graph.facebook.com/v2.6/me/messages'
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
 bot = Bot(ACCESS_TOKEN)
@@ -52,7 +54,44 @@ def get_message():
     return random.choice(sample_responses)
 
 #uses PyMessenger to send response to user
-def send_message(recipient_id, response):
+def send_message(recipient_id, text):
     #sends user the text message provided via input response parameter
-    bot.send_text_message(recipient_id, response)
+    """Send a response to Facebook"""
+    payload = {
+        'message': {
+            'text': text
+        },
+        'recipient': {
+            'id': recipient_id
+        },
+        'notification_type': 'regular'
+    }
+
+    auth = {
+        'access_token': ACCESS_TOKEN
+    }
+    # payload = {
+    #     "recipient":{
+    #         "id":"recipient_id"
+    #     },
+    #     "messaging_type": "RESPONSE",
+    #     "message":{
+    #         "text": "Pick a color:",
+    #         "quick_replies":[
+    #         {
+    #             "content_type":"text",
+    #             "title":"Red",
+    #         },{
+    #             "content_type":"text",
+    #             "title":"Green",
+    #         }
+    #         ]
+    #     }
+    #     }
+
+    response = requests.post(
+        FB_API_URL,
+        params=auth,
+        json=payload
+    )
     return "success"
