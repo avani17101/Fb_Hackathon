@@ -6,9 +6,10 @@ from .quick_replies import replies
 import requests
 
 app = Flask(__name__)
-FB_API_URL = 'https://graph.facebook.com/v2.6/me/messages'
+FB_API_URL = 'https://graph.facebook.com/v7.0/me/messages'
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
+notif_token = 0
 
 #We will receive messages that Facebook sends our bot at this endpoint 
 @app.route("/", methods=['GET', 'POST'])
@@ -39,9 +40,19 @@ def receive_message():
             elif message.get('postback'):
                 recipient_id = message['sender']['id']
                 handle_postback(recipient_id,message['postback'])
+            elif message.get('optin'):
+                recipient_id = message['sender']['id']
+                handle_optin(recipient_id, message['optin'])
 
     return "Message Processed"
 
+def handle_optin(recipient_id, optin):
+    payload = optin['payload']
+    notif_token = optin['one_time_notif_token']
+    temp_dict = {}
+    temp_dict['text'] = ""
+    if payload == "notif":
+        send_message(recipient_id, "One time notif token: "+str(optin['one_time_notif_token']), temp_dict)
 
 def verify_fb_token(token_sent):
     #take token sent by facebook and verify it matches the verify token you sent
@@ -52,10 +63,12 @@ def verify_fb_token(token_sent):
 
 def handle_postback(recipient_id,text):
     payload = text['payload']
+    temp_dict = {}
+    temp_dict['text'] = ""
     if payload == "red":
-        send_message(recipient_id, "You chose red", "")
+        send_message(recipient_id, "You chose red", temp_dict)
     elif payload == "green":
-        send_message(recipient_id, "You chose green", "")
+        send_message(recipient_id, "You chose green", temp_dict)
 
 
 #chooses a random message to send to the user
@@ -78,6 +91,31 @@ def send_message(recipient_id, text, message_rec):
             "text": "Pick a color:",
             "quick_replies": replies["color"]
         }
+        }
+    elif (message_rec['text'] == "notif"):
+        payload = {
+            "recipient": {
+                "id":recipient_id
+        },
+        "message": {
+                "attachment": {
+                "type":"template",
+                "payload": {
+                    "template_type":"one_time_notif_req",
+                    "title":"Do u want a one-time-notif?",
+                    "payload":"notif"
+                }
+                }
+            }
+        }
+    elif message_rec['text'] == "send notif":
+        payload = {
+            "recipient": {
+                "one_time_notif_token": notif_token
+            },
+            "message": {
+                "text":"One time notif sent"
+            }
         }
     elif message_rec.get('quick_reply'):
         if message_rec['quick_reply']['payload'] == 'red':
