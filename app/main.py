@@ -6,19 +6,21 @@ from flask_pymongo import pymongo
 from .config import ACCTOKEN,VERTOKEN
 from .quick_replies import replies
 import requests
+import datetime
 
 
-MONGO_URL = "mongodb+srv://susiejojo1:Dipanwita7*@cluster0-tapb2.mongodb.net/sample_mflix?retryWrites=true&w=majority"
+MONGO_URL = "mongodb+srv://susiejojo1:Dipanwita7*@cluster0-tapb2.mongodb.net/friend_indeed?retryWrites=true&w=majority"
 
 app = Flask(__name__)
 client = pymongo.MongoClient(MONGO_URL)
-db = client.sample_mflix
+db = client.friend_indeed
 
 FB_API_URL = 'https://graph.facebook.com/v7.0/me/messages'
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
 notif_token = 0
-
+mov = db.psych.find_one({"name" : "Dr. Dipanwita"})
+print(mov)
 #We will receive messages that Facebook sends our bot at this endpoint 
 @app.route("/", methods=['GET', 'POST'])
 def receive_message():
@@ -102,31 +104,56 @@ def send_message(recipient_id, text, message_rec):
             }
     elif(message_rec['text'] == "color"):
         payload = {
-        "recipient":{
-            "id": recipient_id
-        },
-        "messaging_type": "RESPONSE",
-        "message":{
-            "text": "Pick a color:",
-            "quick_replies": replies["color"]
+            "recipient":{
+                "id": recipient_id
+            },
+            "messaging_type": "RESPONSE",
+            "message":{
+                "text": "Pick a color:",
+                "quick_replies": replies["color"]
+            }
         }
+    elif(message_rec['text'].startswith("appointment")):
+        app_time =datetime.datetime.strptime(message_rec['text'].split(" ")[1], '%H:%M')
+        t = datetime.datetime.strptime("10","%M")
+        
+        delta = datetime.timedelta(hours=0, minutes=t.minute, seconds=0)
+        reminders = []
+        for i in range(1,4):
+            temp_dict = {}
+            temp_time = app_time - i*delta
+            temp_time_str = str(temp_time.hour)+":"+str(temp_time.minute)
+            temp_dict['content_type'] = "text"
+            temp_dict['title'] = temp_time_str
+            temp_dict['payload'] = "reminder " + temp_time_str
+            reminders.append(temp_dict)
+        payload = {
+            "recipient":{
+                "id": recipient_id
+            },
+            "messaging_type": "RESPONSE",
+            "message":{
+                "text": "Pick a reminder time:",
+                "quick_replies": reminders
+            }
         }
+        print(app_time,payload)
     elif (message_rec['text'] == "notif"):
         payload = {
             "recipient": {
                 "id":recipient_id
-        },
-        "message": {
-                "attachment": {
-                "type":"template",
-                "payload": {
-                    "template_type":"one_time_notif_req",
-                    "title":"Do u want a one-time-notif?",
-                    "payload":"notif"
-                }
+            },
+            "message": {
+                    "attachment": {
+                    "type":"template",
+                    "payload": {
+                        "template_type":"one_time_notif_req",
+                        "title":"Do u want a one-time-notif?",
+                        "payload":"notif"
+                    }
+                    }
                 }
             }
-        }
     elif message_rec['text'] == "send notif":
         payload = {
             "recipient": {
@@ -151,6 +178,16 @@ def send_message(recipient_id, text, message_rec):
             payload = {
                 'message': {
                     'text': "You chose green"
+                },
+                'recipient': {
+                    'id': recipient_id
+                },
+                'notification_type': 'regular'
+            }
+        elif message_rec['quick_reply']['payload'].startswith('reminder'):
+            payload = {
+                'message': {
+                    'text': "You will be notified"
                 },
                 'recipient': {
                     'id': recipient_id
