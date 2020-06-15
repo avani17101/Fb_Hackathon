@@ -8,14 +8,12 @@ from .quick_replies import replies
 import requests
 
 
-MONGO_URL = os.environ.get('MONGO_URL')
-if not MONGO_URL:
-    MONGO_URL = "mongodb://susiejojo1:Dipanwita7*@cluster0-shard-00-00-tapb2.mongodb.net:27017,cluster0-shard-00-01-tapb2.mongodb.net:27017,cluster0-shard-00-02-tapb2.mongodb.net:27017/sample_mflix?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true&w=majority"
+MONGO_URL = "mongodb+srv://susiejojo1:Dipanwita7*@cluster0-tapb2.mongodb.net/sample_mflix?retryWrites=true&w=majority"
 
 app = Flask(__name__)
 client = pymongo.MongoClient(MONGO_URL)
-db = client.get_database('sample_mflix')
-movie_coll = pymongo.collection.Collection(db,'movies')
+db = client.sample_mflix
+
 FB_API_URL = 'https://graph.facebook.com/v7.0/me/messages'
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
@@ -92,8 +90,16 @@ def send_message(recipient_id, text, message_rec):
     #sends user the text message provided via input response parameter
     """Send a response to Facebook"""
     if (message_rec['text']=="movie"):
-        mov = db.db.collection.find_one({"title":"Blacksmith Scene"})
-        print (mov)
+        mov = db.movies.find_one({"title":"The Great Train Robbery"})
+        payload = {
+                'message': {
+                    'text': mov["fullplot"]
+                },
+                'recipient': {
+                    'id': recipient_id
+                },
+                'notification_type': 'regular'
+            }
     elif(message_rec['text'] == "color"):
         payload = {
         "recipient":{
