@@ -20,7 +20,7 @@ print(mov)
 notif_token = 0
 cur_slots = []
 available_slots = []
-from .quick_replies import replies
+from .quick_replies import replies,generate_app_slots
 
 #We will receive messages that Facebook sends our bot at this endpoint 
 @app.route("/", methods=['GET', 'POST'])
@@ -112,7 +112,7 @@ def send_message(recipient_id, text, message_rec):
         payload = {
                 'message': {
                     "text": "Pick a time slot when you'll be available:",
-                    "quick_replies": replies["time_slots"]
+                    "quick_replies": generate_app_slots(cur_slots,available_slots)
                 },
                 'recipient': {
                     'id': recipient_id
@@ -120,6 +120,7 @@ def send_message(recipient_id, text, message_rec):
                 "messaging_type": "RESPONSE",
                 'notification_type': 'regular'
         }
+        print(payload)
     elif(message_rec['text'] == "color"):
         payload = {
         "recipient":{
@@ -168,6 +169,17 @@ def send_message(recipient_id, text, message_rec):
                 'notification_type': 'regular'
             }
         elif message_rec['quick_reply']['payload'] == 'green':
+            payload = {
+                'message': {
+                    'text': "You chose green"
+                },
+                'recipient': {
+                    'id': recipient_id
+                },
+                'notification_type': 'regular'
+            }
+        elif message_rec['quick_reply']['payload'].startswith('appointment'):
+            print("dope")
             payload = {
                 'message': {
                     'text': "You chose green"

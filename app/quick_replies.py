@@ -1,5 +1,5 @@
 from .main import cur_slots,available_slots
-def generate_slots(cur_slots,available_slots):
+def generate_app_slots(cur_slots,available_slots):
     slots_arr = []
     for i in range(len(cur_slots)):
         if (available_slots[i]):
@@ -7,7 +7,7 @@ def generate_slots(cur_slots,available_slots):
                     "content_type":"text",
                     "title":str(cur_slots[i]),
                     "payload":str("appointment "+str(cur_slots[i])),
-                    "image_url":"https://images-eu.ssl-images-amazon.com/images/I/31oIZDvTgFL._SY300_QL70_ML2_.jpg"
+                    "image_url":"https://i.pinimg.com/736x/af/3e/d0/af3ed088eb35793c077894f48f383e84.jpg"
                 }
         slots_arr.append(slot_dict)
     return slots_arr
@@ -26,5 +26,5 @@ replies = {
                 "image_url":"https://lh3.googleusercontent.com/proxy/4thAzIZQcMhIFwcHQbN6j6OwzoyC-UyHmtxXCn-t5fOMgzZd7oAy4SAfSFMSZDcw1aBjSotVXnw2HDg3v6JKFqahdqu77yFtcqKPJ8iIFWAYLw"
             }
     ],
-    "time_slots": generate_slots(cur_slots,available_slots)
+    "time_slots": generate_app_slots(cur_slots,available_slots)
 }
