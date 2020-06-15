@@ -68,7 +68,7 @@ def find_related_urls(title):
     st = " "
     related_urls = []
     # to search 
-    query1 = "ndtv: "+ title
+    query1 = "youtube: "+ title
     query2 = "timesofindia: "+title
     query3 = "hindustantimes: " + title
     for q in search(query1, tld="com", num=10, stop=1, pause=2): 
