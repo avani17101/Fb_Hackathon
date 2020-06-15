@@ -4,20 +4,23 @@ import os
 from flask import Flask, request
 from flask_pymongo import pymongo
 from .config import ACCTOKEN,VERTOKEN
-from .quick_replies import replies
 import requests
 
-
-MONGO_URL = "mongodb+srv://susiejojo1:Dipanwita7*@cluster0-tapb2.mongodb.net/sample_mflix?retryWrites=true&w=majority"
+MONGO_URL = "mongodb+srv://susiejojo1:Dipanwita7*@cluster0-tapb2.mongodb.net/friend_indeed?retryWrites=true&w=majority"
 
 app = Flask(__name__)
 client = pymongo.MongoClient(MONGO_URL)
-db = client.sample_mflix
+db = client.friend_indeed
 
 FB_API_URL = 'https://graph.facebook.com/v7.0/me/messages'
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
+mov = db.psych.find_one({"name" : "Dr. Dipanwita"})
+print(mov)
 notif_token = 0
+cur_slots = []
+available_slots = []
+from .quick_replies import replies
 
 #We will receive messages that Facebook sends our bot at this endpoint 
 @app.route("/", methods=['GET', 'POST'])
@@ -100,16 +103,33 @@ def send_message(recipient_id, text, message_rec):
                 },
                 'notification_type': 'regular'
             }
+    elif (message_rec['text']=="Book an appointment"):
+        cur_slots = []
+        available_slots = []
+        psych = db.psych.find_one({"name":"Dr. Dipanwita"})
+        cur_slots = psych["time"]
+        available_slots = psych["is_available"]
+        payload = {
+                'message': {
+                    "text": "Pick a time slot when you'll be available:",
+                    "quick_replies": replies["time_slots"]
+                },
+                'recipient': {
+                    'id': recipient_id
+                },
+                "messaging_type": "RESPONSE",
+                'notification_type': 'regular'
+        }
     elif(message_rec['text'] == "color"):
         payload = {
         "recipient":{
             "id": recipient_id
-        },
+                    },
         "messaging_type": "RESPONSE",
         "message":{
             "text": "Pick a color:",
             "quick_replies": replies["color"]
-        }
+                }
         }
     elif (message_rec['text'] == "notif"):
         payload = {
