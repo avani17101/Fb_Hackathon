@@ -9,6 +9,13 @@ verify_ssl = true
 flask = "*"
 gunicorn = "*"
 pymessenger = "*"
+flask-pymongo = "*"
+flask-restful = "*"
+pymongo = {extras = ["srv"],version = "*"}
+pytz = "*"
+werkzeug = "*"
+six = "*"
+dnspython = "*"
 
 [requires]
 python_version = "3.6"
