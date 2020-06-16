@@ -3,13 +3,13 @@ import random
 import os
 from flask import Flask, request
 from flask_pymongo import pymongo
-from .config import ACCTOKEN, VERTOKEN
+from .config import ACCTOKEN, VERTOKEN, DB_URL
 import requests
 import datetime
 from .quick_replies import replies, generate_app_slots, generate_reminder_slots
 from apscheduler.schedulers.background import BackgroundScheduler
 
-MONGO_URL = "mongodb+srv://susiejojo1:Dipanwita7*@cluster0-tapb2.mongodb.net/friend_indeed?retryWrites=true&w=majority"
+MONGO_URL = DB_URL
 
 app = Flask(__name__)
 client = pymongo.MongoClient(MONGO_URL)

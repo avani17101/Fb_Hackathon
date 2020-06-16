@@ -15,8 +15,9 @@ pymongo = {extras = ["srv"],version = "*"}
 pytz = "*"
 werkzeug = "*"
 six = "*"
-dnspython = "*"
 pipfile = "*"
+apscheduler = "*"
+dnspython = "*"
 
 [requires]
 python_version = "3.6"
