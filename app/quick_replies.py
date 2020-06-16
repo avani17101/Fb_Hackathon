@@ -1,4 +1,5 @@
-from .main import cur_slots,available_slots
+import datetime
+
 def generate_app_slots(cur_slots,available_slots):
     slots_arr = []
     for i in range(len(cur_slots)):
@@ -11,6 +12,21 @@ def generate_app_slots(cur_slots,available_slots):
                 }
         slots_arr.append(slot_dict)
     return slots_arr
+def generate_reminder_slots(app_time):
+    t = datetime.datetime.strptime("10","%M")
+    delta = datetime.timedelta(hours=0, minutes=t.minute, seconds=0)
+    reminders = []
+    for i in range(1,4):
+        temp_dict = {}
+        temp_time = app_time - i*delta
+        temp_time_str = temp_time.strftime("%H:%M")
+        temp_dict['content_type'] = "text"
+        temp_dict['title'] = temp_time_str
+        temp_dict['payload'] = "reminder " + temp_time_str+" "+app_time.strftime("%H:%M")
+        temp_dict["image_url"]="https://i.pinimg.com/736x/af/3e/d0/af3ed088eb35793c077894f48f383e84.jpg"
+        reminders.append(temp_dict)
+    return reminders    
+
 replies = {
 	"color": 
 	[
@@ -25,6 +41,5 @@ replies = {
                 "payload":"green",
                 "image_url":"https://lh3.googleusercontent.com/proxy/4thAzIZQcMhIFwcHQbN6j6OwzoyC-UyHmtxXCn-t5fOMgzZd7oAy4SAfSFMSZDcw1aBjSotVXnw2HDg3v6JKFqahdqu77yFtcqKPJ8iIFWAYLw"
             }
-    ],
-    "time_slots": generate_app_slots(cur_slots,available_slots)
+    ]
 }
