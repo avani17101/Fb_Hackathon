@@ -155,6 +155,7 @@ def receive_message():
                             recipient_id = person["fp"]
                         else:
                             recipient_id = person["sp"]
+                            db.paired_peeps.update_one({"user": partner_id}, {"$set": {"status": 1}})
                         response_sent_text = message["message"]["text"]
                         payload = {
                             "recipient": {"id": recipient_id},
@@ -165,6 +166,7 @@ def receive_message():
                         }
                         print("mesages sent")
                         send_request(payload)
+                        db.paired_peeps.update_one({"fp": person["fp"]}, {"$set": {"timestamp": datetime.datetime.now()}})
 
     return "Message Processed"
 
@@ -273,7 +275,7 @@ def send_message(recipient_id, text, message_rec):
                     {"user": recipient_id}, {"$set": {"status": 1}}
                 )
                 db.user_status.update_one({"user": partner_id}, {"$set": {"status": 1}})
-                db.paired_peeps.insert_one({"fp": recipient_id, "sp": partner_id})
+                db.paired_peeps.insert_one({"fp": recipient_id, "sp": partner_id, "timestamp" : datetime.datetime.now() })
                 send_request(payload_partner)
             else:
                 payload = {
