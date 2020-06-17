@@ -18,8 +18,7 @@ db = client.friend_indeed
 FB_API_URL = "https://graph.facebook.com/v7.0/me/messages"
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
-mov = db.psych.find_one({"name": "Dr. Dipanwita"})
-print(mov)
+pool = []
 notif_token = 0
 cur_slots = []
 available_slots = []
@@ -135,13 +134,37 @@ def get_message():
 def send_message(recipient_id, text, message_rec):
     # sends user the text message provided via input response parameter
     """Send a response to Facebook"""
-    if message_rec["text"] == "movie":
-        mov = db.movies.find_one({"title": "The Great Train Robbery"})
-        payload = {
-            "message": {"text": mov["fullplot"]},
-            "recipient": {"id": recipient_id},
-            "notification_type": "regular",
-        }
+    if message_rec["text"] == "Talk to someone":
+        if (len(pool)==0):
+            print ("Adding to pool")
+            pool.append({"id":recipient_id,"timestamp": datetime.datetime.now().strftime("%H:%M")})
+            payload = {
+                "message": {"text": "Please wait for 1 min for us to pair you with someone else"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+        else:
+            print ("Someone is there in pool")
+            partner_id = pool[0]["id"]
+            if (partner_id!=recipient_id):
+                pool[:] = []
+                payload_partner = {
+                "message": {"text": "Congrats! You,B,have been paired with A."},
+                "recipient": {"id": partner_id},
+                "notification_type": "regular",
+                }
+                payload = {
+                "message": {"text": "Congrats! You,A,have been paired with B"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+                }
+                send_request(payload_partner)
+            else:
+                payload = {
+                "message": {"text": "Please wait for 1 min for us to pair you with someone else"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
     elif message_rec["text"] == "Book an appointment":
         cur_slots = []
         available_slots = []
