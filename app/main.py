@@ -22,6 +22,7 @@ pool = []
 notif_token = 0
 cur_slots = []
 available_slots = []
+anonymous_usernames =  ['pigeon', 'seagull', 'bat', 'owl', 'sparrows', 'robin', 'bluebird', 'cardinal', 'hawk', 'fish', 'shrimp', 'frog', 'whale', 'shark', 'eel', 'seal', 'lobster', 'octopus', 'mole', 'shrew', 'rabbit', 'chipmunk', 'armadillo', 'dog', 'cat', 'lynx', 'mouse', 'lion', 'moose', 'horse', 'deer', 'raccoon', 'zebra', 'goat', 'cow', 'pig', 'tiger', 'wolf', 'pony', 'antelope', 'buffalo', 'camel', 'donkey', 'elk', 'fox', 'monkey', 'gazelle', 'impala', 'jaguar', 'leopard', 'lemur', 'yak', 'elephant', 'giraffe', 'hippopotamus', 'rhinoceros', 'grizzlybear']
 def send_request(payload):
     auth = {"access_token": ACCESS_TOKEN}
     response = requests.post(FB_API_URL, params=auth, json=payload)
@@ -135,9 +136,11 @@ def send_message(recipient_id, text, message_rec):
     # sends user the text message provided via input response parameter
     """Send a response to Facebook"""
     if message_rec["text"] == "Talk to someone":
+        user_name = "Anonymous "+anonymous_usernames[random.randint(0,len(anonymous_usernames)-1)]
+        print (user_name)
         if (len(pool)==0):
             print ("Adding to pool")
-            pool.append({"id":recipient_id,"timestamp": datetime.datetime.now().strftime("%H:%M")})
+            pool.append({"id":recipient_id,"timestamp": datetime.datetime.now().strftime("%H:%M"),"username":user_name})
             payload = {
                 "message": {"text": "Please wait for 1 min for us to pair you with someone else"},
                 "recipient": {"id": recipient_id},
@@ -146,15 +149,16 @@ def send_message(recipient_id, text, message_rec):
         else:
             print ("Someone is there in pool")
             partner_id = pool[0]["id"]
+            partner_username = pool[0]["username"]
             if (partner_id!=recipient_id):
                 pool[:] = []
                 payload_partner = {
-                "message": {"text": "Congrats! You,B,have been paired with A."},
+                "message": {"text": "Congrats! You have been paired with "+str(user_name)},
                 "recipient": {"id": partner_id},
                 "notification_type": "regular",
                 }
                 payload = {
-                "message": {"text": "Congrats! You,A,have been paired with B"},
+                "message": {"text": "Congrats! You have been paired with "+str(partner_username)},
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
                 }
