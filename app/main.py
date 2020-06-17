@@ -3,13 +3,13 @@ import random
 import os
 from flask import Flask, request
 from flask_pymongo import pymongo
-from .config import ACCTOKEN, VERTOKEN
+from .config import ACCTOKEN, VERTOKEN, DB_URL
 import requests
 import datetime
 from .quick_replies import replies, generate_app_slots, generate_reminder_slots
 from apscheduler.schedulers.background import BackgroundScheduler
 
-MONGO_URL = "mongodb+srv://susiejojo1:Dipanwita7*@cluster0-tapb2.mongodb.net/friend_indeed?retryWrites=true&w=majority"
+MONGO_URL = DB_URL
 
 app = Flask(__name__)
 client = pymongo.MongoClient(MONGO_URL)
@@ -18,29 +18,102 @@ db = client.friend_indeed
 FB_API_URL = "https://graph.facebook.com/v7.0/me/messages"
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
-mov = db.psych.find_one({"name": "Dr. Dipanwita"})
-print(mov)
+pool = []
 notif_token = 0
 cur_slots = []
 available_slots = []
+anonymous_usernames = [
+    "pigeon",
+    "seagull",
+    "bat",
+    "owl",
+    "sparrows",
+    "robin",
+    "bluebird",
+    "cardinal",
+    "hawk",
+    "fish",
+    "shrimp",
+    "frog",
+    "whale",
+    "shark",
+    "eel",
+    "seal",
+    "lobster",
+    "octopus",
+    "mole",
+    "shrew",
+    "rabbit",
+    "chipmunk",
+    "armadillo",
+    "dog",
+    "cat",
+    "lynx",
+    "mouse",
+    "lion",
+    "moose",
+    "horse",
+    "deer",
+    "raccoon",
+    "zebra",
+    "goat",
+    "cow",
+    "pig",
+    "tiger",
+    "wolf",
+    "pony",
+    "antelope",
+    "buffalo",
+    "camel",
+    "donkey",
+    "elk",
+    "fox",
+    "monkey",
+    "gazelle",
+    "impala",
+    "jaguar",
+    "leopard",
+    "lemur",
+    "yak",
+    "elephant",
+    "giraffe",
+    "hippopotamus",
+    "rhinoceros",
+    "grizzlybear",
+]
+
+
 def send_request(payload):
     auth = {"access_token": ACCESS_TOKEN}
     response = requests.post(FB_API_URL, params=auth, json=payload)
     return "success"
 
+
 # We will receive messages that Facebook sends our bot at this endpoint
 def check_one_time_notif():
     time_now = datetime.datetime.now().strftime("%H:%M")
-    for i in db.one_time_notif.find({ "notif_time" : time_now}):
+    for i in db.one_time_notif.find({"notif_time": time_now}):
         payload = {
             "recipient": {"one_time_notif_token": i["notif_token"]},
-            "message": {"text": "You have an appointment at "+i["app_time"]},
+            "message": {"text": "You have an appointment at " + i["app_time"]},
         }
         send_request(payload)
 
+
+def check_id(id):
+    check_user = db.user_status.find_one({"user": id})
+    if check_user is None:
+        db.user_status.insert_one({"user": id, "status": 0})
+        return 0
+    else:
+        return check_user["status"]
+
+
 sched = BackgroundScheduler()
-sched.add_job(check_one_time_notif, 'cron',minute='0,10,20,30,40,50')
+sched.add_job(check_one_time_notif, "cron", minute="0,10,20,30,40,50")
 sched.start()
+
+
 @app.route("/", methods=["GET", "POST"])
 def receive_message():
     if request.method == "GET":
@@ -56,24 +129,42 @@ def receive_message():
         for event in output["entry"]:
             messaging = event["messaging"]
             for message in messaging:
-                if message.get("message"):
-                    # Facebook Messenger ID for user so we know where to send response back to
-                    recipient_id = message["sender"]["id"]
-                    if message["message"].get("text"):
-                        response_sent_text = get_message()
-                        send_message(
-                            recipient_id, response_sent_text, message["message"]
-                        )
-                    # if user sends us a GIF, photo,video, or any other non-text item
-                    if message["message"].get("attachments"):
-                        response_sent_nontext = get_message()
-                        send_message(recipient_id, response_sent_nontext)
-                elif message.get("postback"):
-                    recipient_id = message["sender"]["id"]
-                    handle_postback(recipient_id, message["postback"])
-                elif message.get("optin"):
-                    recipient_id = message["sender"]["id"]
-                    handle_optin(recipient_id, message["optin"])
+                recipient_id = message["sender"]["id"]
+                status = check_id(message["sender"]["id"])
+                if status == 0:
+                    if message.get("message"):
+                        # Facebook Messenger ID for user so we know where to send response back to
+                        if message["message"].get("attachments"):
+                            print("Attachment not supported")
+                        if message["message"].get("text"):
+                            response_sent_text = get_message()
+                            send_message(
+                                recipient_id, response_sent_text, message["message"]
+                            )
+                    elif message.get("postback"):
+                        handle_postback(recipient_id, message["postback"])
+                    elif message.get("optin"):
+                        handle_optin(recipient_id, message["optin"])
+                elif status == 1:
+                    person = db.paired_peeps.find_one({"fp": message["sender"]["id"]})
+                    if message.get("message"):
+                        if person is None:
+                            person = db.paired_peeps.find_one(
+                                {"sp": message["sender"]["id"]}
+                            )
+                            recipient_id = person["fp"]
+                        else:
+                            recipient_id = person["sp"]
+                        response_sent_text = message["message"]["text"]
+                        payload = {
+                            "recipient": {"id": recipient_id},
+                            "notification_type": "regular",
+                            "message": {
+                                "text": response_sent_text
+                            },
+                        }
+                        print("mesages sent")
+                        send_request(payload)
 
     return "Message Processed"
 
@@ -92,9 +183,9 @@ def handle_optin(recipient_id, optin):
     elif payload.startswith("reminder"):
         payload_list = payload.split(" ")
         one_time_notif_dict = {
-            "app_time" : payload_list[2],
-            "notif_time" : payload_list[1],
-            "notif_token" : optin["one_time_notif_token"]
+            "app_time": payload_list[2],
+            "notif_time": payload_list[1],
+            "notif_token": optin["one_time_notif_token"],
         }
         db.one_time_notif.insert_one(one_time_notif_dict)
         send_message(
@@ -135,13 +226,63 @@ def get_message():
 def send_message(recipient_id, text, message_rec):
     # sends user the text message provided via input response parameter
     """Send a response to Facebook"""
-    if message_rec["text"] == "movie":
-        mov = db.movies.find_one({"title": "The Great Train Robbery"})
-        payload = {
-            "message": {"text": mov["fullplot"]},
-            "recipient": {"id": recipient_id},
-            "notification_type": "regular",
-        }
+    if message_rec["text"] == "Talk to someone":
+        user_name = (
+            "Anonymous "
+            + anonymous_usernames[random.randint(0, len(anonymous_usernames) - 1)]
+        )
+        print(user_name)
+        if len(pool) == 0:
+            print("Adding to pool")
+            pool.append(
+                {
+                    "id": recipient_id,
+                    "timestamp": datetime.datetime.now().strftime("%H:%M"),
+                    "username": user_name,
+                }
+            )
+            payload = {
+                "message": {
+                    "text": "Please wait for 1 min for us to pair you with someone else"
+                },
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+        else:
+            print("Someone is there in pool")
+            partner_id = pool[0]["id"]
+            partner_username = pool[0]["username"]
+            if partner_id != recipient_id:
+                pool[:] = []
+                payload_partner = {
+                    "message": {
+                        "text": "Congrats! You have been paired with " + str(user_name)
+                    },
+                    "recipient": {"id": partner_id},
+                    "notification_type": "regular",
+                }
+                payload = {
+                    "message": {
+                        "text": "Congrats! You have been paired with "
+                        + str(partner_username)
+                    },
+                    "recipient": {"id": recipient_id},
+                    "notification_type": "regular",
+                }
+                db.user_status.update_one(
+                    {"user": recipient_id}, {"$set": {"status": 1}}
+                )
+                db.user_status.update_one({"user": partner_id}, {"$set": {"status": 1}})
+                db.paired_peeps.insert_one({"fp": recipient_id, "sp": partner_id})
+                send_request(payload_partner)
+            else:
+                payload = {
+                    "message": {
+                        "text": "Please wait for 1 min for us to pair you with someone else"
+                    },
+                    "recipient": {"id": recipient_id},
+                    "notification_type": "regular",
+                }
     elif message_rec["text"] == "Book an appointment":
         cur_slots = []
         available_slots = []
