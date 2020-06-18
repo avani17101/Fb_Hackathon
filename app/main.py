@@ -6,6 +6,8 @@ from flask import Flask, request
 from flask_pymongo import pymongo
 from .config import ACCTOKEN, VERTOKEN, DB_URL
 from .data import anonymous_usernames
+from .handle_standby import *
+from .fb_requests import *
 import requests
 import datetime
 from .quick_replies import replies, generate_app_slots, generate_reminder_slots
@@ -17,8 +19,6 @@ app = Flask(__name__)
 client = pymongo.MongoClient(MONGO_URL)
 db = client.friend_indeed
 
-FB_API_URL = "https://graph.facebook.com/v7.0/me/messages"
-FB_PERSONA_URL = "https://graph.facebook.com/me/personas"
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
 pool = []
@@ -26,17 +26,6 @@ notif_token = 0
 cur_slots = []
 available_slots = []
 reported_person = 0
-def send_request(payload):
-    auth = {"access_token": ACCESS_TOKEN}
-    response = requests.post(FB_API_URL, params=auth, json=payload)
-    return "success"
-
-def send_persona_request(payload):
-    auth = {"access_token": ACCESS_TOKEN}
-    response = requests.post(FB_PERSONA_URL, params=auth, json=payload)
-    persona_id =  response.json()["id"]
-    print ("I'm in function ",persona_id)
-    return persona_id
 
 # We will receive messages that Facebook sends our bot at this endpoint
 def check_one_time_notif():
@@ -91,140 +80,136 @@ def receive_message():
     else:
         # get whatever message a user sent the bot
         output = request.get_json()
-        #print(output)
+        print(output)
         for event in output["entry"]:
-            messaging = event["messaging"]
-            for message in messaging:
-                recipient_id = message["sender"]["id"]
-                status = check_id(message["sender"]["id"])
-                if status//10 == 0:
-                    if message.get("message"):
-                        # Facebook Messenger ID for user so we know where to send response back to
-                        if (message["message"].get("attachments")):
-                            print("Attachment not supported")
-                        if message["message"].get("text"):
-                            response_sent_text = get_message()
-                            send_message(
-                                recipient_id, response_sent_text, message["message"]
-                            )
-                    elif message.get("postback"):
-                        handle_postback(recipient_id, message["postback"])
-                    elif message.get("optin"):
-                        handle_optin(recipient_id, message["optin"])
-                elif status//10 == 1:
-                    if status % 10 == 0:
-                        cur_speaker = ""
-                        persona_id_cur = ""
-                        person = db.paired_peeps.find_one({"fp": message["sender"]["id"]})
+            if (event.get("messaging")):
+                messaging = event["messaging"]
+                for message in messaging:
+                    recipient_id = message["sender"]["id"]
+                    status = check_id(message["sender"]["id"])
+                    if status//10 == 0:
                         if message.get("message"):
-                            if person is None:
-                                person = db.paired_peeps.find_one(
-                                    {"sp": message["sender"]["id"]}
+                            # Facebook Messenger ID for user so we know where to send response back to
+                            if (message["message"].get("attachments")):
+                                print("Attachment not supported")
+                            if message["message"].get("text"):
+                                response_sent_text = get_message()
+                                send_message(
+                                    recipient_id, response_sent_text, message["message"]
                                 )
-                                recipient_id = person["fp"]
-                                cur_speaker = "sp"
-                                persona_id_cur = person["persona_id_sp"]
-                            else:
-                                recipient_id = person["sp"]
-                                cur_speaker = "fp"
-                                persona_id_cur = person["persona_id_fp"]
-                            response_sent_text = message["message"]["text"]
-                            if (response_sent_text=="/end"):
-                                db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
-                                db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
-                                db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 0}})
-                                payload = {
-                                "recipient": {"id": message["sender"]["id"]},
-                                "notification_type": "regular",
-                                "message": {
-                                    "text": "The chat ended. We hope you feel better. Please take some time to rate your partner.", "quick_replies": replies["end_rating"]
-                                },
-                                }
-                                payload_partner = {
-                                "recipient": {"id": recipient_id},
-                                "notification_type": "regular",
-                                "message": {
-                                    "text": "The chat ended. We hope you feel better. Please take some time to rate your partner.", "quick_replies": replies["end_rating"]
-                                },
-                                }
-                                send_request(payload_partner)
-                            elif (response_sent_text=="/report"):
-                                db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
-                                db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
-                                db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 0}})
-                                if person["fp"] == message["sender"]["id"]:
-                                    reported_person =  person["sp"]
+                        elif message.get("postback"):
+                            handle_postback(recipient_id, message["postback"])
+                        elif message.get("optin"):
+                            handle_optin(recipient_id, message["optin"])
+                    elif status//10 == 1:
+                        if status % 10 == 0:
+                            cur_speaker = ""
+                            persona_id_cur = ""
+                            person = db.paired_peeps.find_one({"fp": message["sender"]["id"]})
+                            if message.get("message"):
+                                if person is None:
+                                    person = db.paired_peeps.find_one(
+                                        {"sp": message["sender"]["id"]}
+                                    )
+                                    recipient_id = person["fp"]
+                                    cur_speaker = "sp"
+                                    persona_id_cur = person["persona_id_sp"]
                                 else:
-                                    reported_person =  person["fp"]
-                                print(reported_person)
-                                payload = {
+                                    recipient_id = person["sp"]
+                                    cur_speaker = "fp"
+                                    persona_id_cur = person["persona_id_fp"]
+                                response_sent_text = message["message"]["text"]
+                                if (response_sent_text=="/end"):
+                                    db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
+                                    db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
+                                    db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 0}})
+                                    payload = {
                                     "recipient": {"id": message["sender"]["id"]},
                                     "notification_type": "regular",
                                     "message": {
-                                        "attachment":{
-                                        "type":"template",
-                                        "payload":{
-                                            "template_type":"button",
-                                            "text":"You reported your partner. Help us identify the issue!",
-                                            "buttons":[
-                                                {
-                                                    "type":"postback",
-                                                    "title":"Harassment/bullying",
-                                                    "payload" : "harass"
-                                                },
-                                                {
-                                                    "type":"postback",
-                                                    "title":"Rude/insensitive",
-                                                    "payload" : "rude"
-                                                },
-                                                {
-                                                    "type":"postback",
-                                                    "title":"Prankster/troll",
-                                                    "payload" : "troll"
-                                                }
-                                            ]
-                                            }
-                                        }
+                                        "text": "The chat ended. We hope you feel better. Please take some time to rate your partner.", "quick_replies": replies["end_rating"]
                                     },
-                                }
-                                payload_partner = {
-                                "recipient": {"id": recipient_id},
-                                "notification_type": "regular",
-                                "message": {
-                                    "text": "We are sorry but your partner reported you. The admins will review the report and get back to you."
-                                },
-                                }
-                                send_request(payload_partner)
-                            else:
-                                payload = {
+                                    }
+                                    payload_partner = {
                                     "recipient": {"id": recipient_id},
                                     "notification_type": "regular",
                                     "message": {
-                                        "text": response_sent_text
+                                        "text": "The chat ended. We hope you feel better. Please take some time to rate your partner.", "quick_replies": replies["end_rating"]
                                     },
-                                    "persona_id": persona_id_cur
-                                }
-                            print("mesages sent")
-                            send_request(payload)
-                            timestamp_str = "timestamp_"+cur_speaker
-                            db.paired_peeps.update_one({cur_speaker: person[cur_speaker]}, {"$set": {timestamp_str: datetime.datetime.now()}})
-                    elif status % 10 == 1:
-                        db.user_status.update_one({"user": message["sender"]["id"]}, {"$set": {"status": 0}})
-                        # if message.get("message"): 
-                        #     try:
-                        #         print(message["message"]["text"], reported_person)
-                        #     except:
-                        #         print("Error")
-                        #     report = {
-                        #         sender : message["sender"]["id"],
-                        #         reported_person_id : reported_person,
-                        #         report_text : message["message"]["text"]
-                        #     }
-                            
-                        #     db.report.insert_one(report)
-                        #     temp_dict = {}
-                        #     temp_dict["text"] = "" 
-                        #     send_message(message["sender"]["id"], "Your report has been noted. We will come back to you soon. Take care!", )
+                                    }
+                                    send_request(payload_partner)
+                                elif (response_sent_text=="/report"):
+                                    db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
+                                    db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
+                                    db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 0}})
+                                    if person["fp"] == message["sender"]["id"]:
+                                        reported_person =  person["sp"]
+                                    else:
+                                        reported_person =  person["fp"]
+                                    print(reported_person)
+                                    payload = {
+                                        "recipient": {"id": message["sender"]["id"]},
+                                        "notification_type": "regular",
+                                        "message": {
+                                            "attachment":{
+                                            "type":"template",
+                                            "payload":{
+                                                "template_type":"button",
+                                                "text":"You reported your partner. Help us identify the issue!",
+                                                "buttons":[
+                                                    {
+                                                        "type":"postback",
+                                                        "title":"Harassment/bullying",
+                                                        "payload" : "harass"
+                                                    },
+                                                    {
+                                                        "type":"postback",
+                                                        "title":"Rude/insensitive",
+                                                        "payload" : "rude"
+                                                    },
+                                                    {
+                                                        "type":"postback",
+                                                        "title":"Prankster/troll",
+                                                        "payload" : "troll"
+                                                    }
+                                                ]
+                                                }
+                                            }
+                                        },
+                                    }
+                                    payload_partner = {
+                                    "recipient": {"id": recipient_id},
+                                    "notification_type": "regular",
+                                    "message": {
+                                        "text": "We are sorry but your partner reported you. The admins will review the report and get back to you."
+                                    },
+                                    }
+                                    send_request(payload_partner)
+                                else:
+                                    payload = {
+                                        "recipient": {"id": recipient_id},
+                                        "notification_type": "regular",
+                                        "message": {
+                                            "text": response_sent_text
+                                        },
+                                        "persona_id": persona_id_cur
+                                    }
+                                print("mesages sent")
+                                send_request(payload)
+                                timestamp_str = "timestamp_"+cur_speaker
+                                db.paired_peeps.update_one({cur_speaker: person[cur_speaker]}, {"$set": {timestamp_str: datetime.datetime.now()}})
+                        elif status % 10 == 1:
+                            db.user_status.update_one({"user": message["sender"]["id"]}, {"$set": {"status": 0}})
+                            if message.get("message"):
+                                print(message["message"]["text"])
+                                
+                                
+                            #     db.report.insert_one(report)
+                            #     temp_dict = {}
+                            #     temp_dict["text"] = "" 
+                           #     send_message(message["sender"]["id"], "Your report has been noted. We will come back to you soon. Take care!", )
+            elif (event.get("standby")):
+                handle_standby(event["standby"])
     return "Message Processed"
 
 
@@ -257,7 +242,14 @@ def handle_postback(recipient_id, postback):
     temp_dict["text"] = ""
     if payload in ['harass', 'rude', 'troll']:
         db.user_status.update_one({"user": recipient_id}, {"$set": {"status": 11}})
-        send_message(recipient_id, "Describe ur problem", temp_dict)
+        send_message(recipient_id, "Describe ur problem to the admins", temp_dict)
+        handover_payload = {
+        "target_app_id": 263902037430900,
+        "recipient":{"id":recipient_id},
+        "metadata": "Redirecting to a live agent..."
+        }
+        send_handover_request(handover_payload)
+
 
 def verify_fb_token(token_sent):
     # take token sent by facebook and verify it matches the verify token you sent
