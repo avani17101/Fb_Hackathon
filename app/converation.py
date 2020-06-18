@@ -55,11 +55,18 @@ def suggest_ideas():
     return question(suggestion_inquiry + "       " + idea + "          " + "Would you like another suggestion?")
 
 def suggest_songs():
-    query = "Soothing music for depression"
+    songs_lst = ["Motivating music","Cheerfull music","relaxation music for depression","best musich therapy music","Soothing music for depression"]
+    query = random.choice(songs_lst)
     return find_related_urls(query,"youtube")
 
 def suggest_yoga():
-    query = "Depression yoga"
+    yoga_lst = ["Depression yoga","yoga asana practice for mind relaxation"]
+    query = random.choice(yoga_lst)
+    return find_related_urls(query,"youtube")
+
+def recommend_funny_video():
+    funny_video_lst = ["Freinds","kunfu panda","Carry Minaty","Kanny sebestian","most funny video"]
+    query = random.choice(funny_video_lst)
     return find_related_urls(query,"youtube")
 
 def show_meme():
