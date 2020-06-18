@@ -1,9 +1,11 @@
 # Python libraries that we need to import for our bot
+import schedule
 import random
 import os
 from flask import Flask, request
 from flask_pymongo import pymongo
 from .config import ACCTOKEN, VERTOKEN, DB_URL
+from .data import anonymous_usernames
 import requests
 import datetime
 from .quick_replies import replies, generate_app_slots, generate_reminder_slots
@@ -22,66 +24,6 @@ pool = []
 notif_token = 0
 cur_slots = []
 available_slots = []
-anonymous_usernames = [
-    "pigeon",
-    "seagull",
-    "bat",
-    "owl",
-    "sparrows",
-    "robin",
-    "bluebird",
-    "cardinal",
-    "hawk",
-    "fish",
-    "shrimp",
-    "frog",
-    "whale",
-    "shark",
-    "eel",
-    "seal",
-    "lobster",
-    "octopus",
-    "mole",
-    "shrew",
-    "rabbit",
-    "chipmunk",
-    "armadillo",
-    "dog",
-    "cat",
-    "lynx",
-    "mouse",
-    "lion",
-    "moose",
-    "horse",
-    "deer",
-    "raccoon",
-    "zebra",
-    "goat",
-    "cow",
-    "pig",
-    "tiger",
-    "wolf",
-    "pony",
-    "antelope",
-    "buffalo",
-    "camel",
-    "donkey",
-    "elk",
-    "fox",
-    "monkey",
-    "gazelle",
-    "impala",
-    "jaguar",
-    "leopard",
-    "lemur",
-    "yak",
-    "elephant",
-    "giraffe",
-    "hippopotamus",
-    "rhinoceros",
-    "grizzlybear",
-]
-
 
 def send_request(payload):
     auth = {"access_token": ACCESS_TOKEN}
@@ -99,6 +41,20 @@ def check_one_time_notif():
         }
         send_request(payload)
 
+def one_minute_jobs():
+    minute_delta = datetime.timedelta(hours=0, minutes=1, seconds=0)
+    removed = []
+    for i in db.pool.find({}):
+        if datetime.datetime.now() - i["timestamp"] > minute_delta:
+            db.pool.remove({"id" : i["id"]})
+            print("yayy1")
+            payload = {
+                "recipient": {"id": i["id"]},
+                "message": {"text": "Sorry! We couldn't find anyone at this moment. Try again after some time."},
+            }
+            send_request(payload)
+    
+        
 
 def check_id(id):
     check_user = db.user_status.find_one({"user": id})
@@ -113,6 +69,9 @@ sched = BackgroundScheduler()
 sched.add_job(check_one_time_notif, "cron", minute="0,10,20,30,40,50")
 sched.start()
 
+sched = BackgroundScheduler()
+sched.add_job(one_minute_jobs, "cron", minute="0-59")
+sched.start()
 
 @app.route("/", methods=["GET", "POST"])
 def receive_message():
@@ -155,7 +114,6 @@ def receive_message():
                             recipient_id = person["fp"]
                         else:
                             recipient_id = person["sp"]
-                            db.paired_peeps.update_one({"user": partner_id}, {"$set": {"status": 1}})
                         response_sent_text = message["message"]["text"]
                         payload = {
                             "recipient": {"id": recipient_id},
@@ -233,16 +191,24 @@ def send_message(recipient_id, text, message_rec):
             "Anonymous "
             + anonymous_usernames[random.randint(0, len(anonymous_usernames) - 1)]
         )
+        pool = db.pool.find({})
         print(user_name)
-        if len(pool) == 0:
+        if pool.count() == 0:
             print("Adding to pool")
-            pool.append(
-                {
-                    "id": recipient_id,
-                    "timestamp": datetime.datetime.now().strftime("%H:%M"),
-                    "username": user_name,
-                }
-            )
+            temp_pool = {
+                "id": recipient_id,
+                "timestamp": datetime.datetime.now(),
+                "username": user_name,
+            }
+            db.pool.insert_one(temp_pool)
+            # pool.append(
+            #     {
+            #         "id": recipient_id,
+            #         "timestamp": datetime.datetime.now(),
+            #         "username": user_name,
+            #     }
+            # )
+            
             payload = {
                 "message": {
                     "text": "Please wait for 1 min for us to pair you with someone else"
@@ -255,7 +221,8 @@ def send_message(recipient_id, text, message_rec):
             partner_id = pool[0]["id"]
             partner_username = pool[0]["username"]
             if partner_id != recipient_id:
-                pool[:] = []
+                # pool[:] = []
+                db.pool.remove({"id" : partner_id})
                 payload_partner = {
                     "message": {
                         "text": "Congrats! You have been paired with " + str(user_name)
