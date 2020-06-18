@@ -93,7 +93,7 @@ def receive_message():
                 if status == 0:
                     if message.get("message"):
                         # Facebook Messenger ID for user so we know where to send response back to
-                        if message["message"].get("attachments"):
+                        if (message["message"].get("attachments")):
                             print("Attachment not supported")
                         if message["message"].get("text"):
                             response_sent_text = get_message()
@@ -134,6 +134,48 @@ def receive_message():
                             "notification_type": "regular",
                             "message": {
                                 "text": "The chat ended. We hope you feel better. Please take some time to rate your partner.", "quick_replies": replies["end_rating"]
+                            },
+                            }
+                            send_request(payload_partner)
+                        elif (response_sent_text=="/report"):
+                            db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
+                            db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
+                            db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 0}})
+                            payload = {
+                            "recipient": {"id": message["sender"]["id"]},
+                            "notification_type": "regular",
+                            "message": {
+                                "attachment":{
+                                "type":"template",
+                                "payload":{
+                                    "template_type":"button",
+                                    "text":"You reported your partner. Help us identify the issue!",
+                                    "buttons":[
+                                        {
+                                            "type":"web_url",
+                                            "url":"https://www.messenger.com",
+                                            "title":"Harassment/bullying"
+                                        },
+                                        {
+                                            "type":"web_url",
+                                            "url":"https://www.messenger.com",
+                                            "title":"Rude/insensitive"
+                                        },
+                                        {
+                                            "type":"web_url",
+                                            "url":"https://www.messenger.com",
+                                            "title":"Prankster/troll"
+                                        }
+                                    ]
+                                    }
+                                }
+                            },
+                            }
+                            payload_partner = {
+                            "recipient": {"id": recipient_id},
+                            "notification_type": "regular",
+                            "message": {
+                                "text": "We are sorry but your partner reported you. The admins will review the report and get back to you."
                             },
                             }
                             send_request(payload_partner)
@@ -326,6 +368,12 @@ def send_message(recipient_id, text, message_rec):
         elif message_rec["quick_reply"]["payload"] == "bad":
             payload = {
                 "message": {"text": "We promise to be better next time"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+        elif message_rec["quick_reply"]["payload"] in ["bully","rude","troll"]:
+            payload = {
+                "message": {"text": "Please explain the issue you faced so that the admins can review and take adequate steps."},
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
