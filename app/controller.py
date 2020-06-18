@@ -43,7 +43,7 @@ def re():
     return ((random.choice(reprompts)) + " " + (help_message))
 
 def condolences():
-    """This function  generates the condolences used by the voice.py functions when a user responds with something negative"""
+    """This function  generates the condolences functions when a user responds with something negative"""
     condolences = [
         "I'm sorry to hear that.",
         "I'm sorry you aren't feeling good.",
