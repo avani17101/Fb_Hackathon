@@ -18,6 +18,7 @@ six = "*"
 pipfile = "*"
 apscheduler = "*"
 dnspython = "*"
+schedule = "*"
 
 [requires]
 python_version = "3.6"
