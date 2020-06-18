@@ -105,6 +105,7 @@ def receive_message():
                     elif message.get("optin"):
                         handle_optin(recipient_id, message["optin"])
                 elif status == 1:
+                    cur_speaker = ""
                     person = db.paired_peeps.find_one({"fp": message["sender"]["id"]})
                     if message.get("message"):
                         if person is None:
@@ -112,11 +113,13 @@ def receive_message():
                                 {"sp": message["sender"]["id"]}
                             )
                             recipient_id = person["fp"]
+                            cur_speaker = "sp"
                         else:
                             recipient_id = person["sp"]
+                            cur_speaker = "fp"
                         response_sent_text = message["message"]["text"]
                         if (response_sent_text=="/end"):
-                            db.paired_peeps.remove({})
+                            db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
                             db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
                             db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 0}})
                             payload = {
@@ -144,7 +147,8 @@ def receive_message():
                             }
                         print("mesages sent")
                         send_request(payload)
-                        db.paired_peeps.update_one({"fp": person["fp"]}, {"$set": {"timestamp": datetime.datetime.now()}})
+                        timestamp_str = "timestamp_"+cur_speaker
+                        db.paired_peeps.update_one({cur_speaker: person[cur_speaker]}, {"$set": {timestamp_str: datetime.datetime.now()}})
 
     return "Message Processed"
 
@@ -262,7 +266,7 @@ def send_message(recipient_id, text, message_rec):
                     {"user": recipient_id}, {"$set": {"status": 1}}
                 )
                 db.user_status.update_one({"user": partner_id}, {"$set": {"status": 1}})
-                db.paired_peeps.insert_one({"fp": recipient_id, "sp": partner_id, "timestamp" : datetime.datetime.now() })
+                db.paired_peeps.insert_one({"fp": recipient_id, "sp": partner_id, "timestamp_fp" : datetime.datetime.now(),"timestamp_sp" : datetime.datetime.now()})
                 send_request(payload_partner)
             else:
                 payload = {
