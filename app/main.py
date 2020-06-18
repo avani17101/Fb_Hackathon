@@ -155,15 +155,34 @@ def receive_message():
                             recipient_id = person["fp"]
                         else:
                             recipient_id = person["sp"]
-                            db.paired_peeps.update_one({"user": partner_id}, {"$set": {"status": 1}})
                         response_sent_text = message["message"]["text"]
-                        payload = {
+                        if (response_sent_text=="/end"):
+                            db.paired_peeps.remove({})
+                            db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
+                            db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 0}})
+                            payload = {
+                            "recipient": {"id": message["sender"]["id"]},
+                            "notification_type": "regular",
+                            "message": {
+                                "text": "The chat ended. We hope you feel better. Please take some time to rate your partner.", "quick_replies": replies["end_rating"]
+                            },
+                            }
+                            payload_partner = {
                             "recipient": {"id": recipient_id},
                             "notification_type": "regular",
                             "message": {
-                                "text": response_sent_text
+                                "text": "The chat ended. We hope you feel better. Please take some time to rate your partner.", "quick_replies": replies["end_rating"]
                             },
-                        }
+                            }
+                            send_request(payload_partner)
+                        else:
+                            payload = {
+                                "recipient": {"id": recipient_id},
+                                "notification_type": "regular",
+                                "message": {
+                                    "text": response_sent_text
+                                },
+                            }
                         print("mesages sent")
                         send_request(payload)
                         db.paired_peeps.update_one({"fp": person["fp"]}, {"$set": {"timestamp": datetime.datetime.now()}})
@@ -317,6 +336,24 @@ def send_message(recipient_id, text, message_rec):
         elif message_rec["quick_reply"]["payload"] == "green":
             payload = {
                 "message": {"text": "You chose green"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+        elif message_rec["quick_reply"]["payload"] == "good":
+            payload = {
+                "message": {"text": "We look forward to it!"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+        elif message_rec["quick_reply"]["payload"] == "medium":
+            payload = {
+                "message": {"text": "Thanks"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+        elif message_rec["quick_reply"]["payload"] == "bad":
+            payload = {
+                "message": {"text": "We promise to be better next time"},
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
