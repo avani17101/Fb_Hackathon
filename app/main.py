@@ -18,6 +18,7 @@ client = pymongo.MongoClient(MONGO_URL)
 db = client.friend_indeed
 
 FB_API_URL = "https://graph.facebook.com/v7.0/me/messages"
+FB_PERSONA_URL = "https://graph.facebook.com/me/personas"
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
 pool = []
@@ -25,12 +26,17 @@ notif_token = 0
 cur_slots = []
 available_slots = []
 reported_person = 0
-
 def send_request(payload):
     auth = {"access_token": ACCESS_TOKEN}
     response = requests.post(FB_API_URL, params=auth, json=payload)
     return "success"
 
+def send_persona_request(payload):
+    auth = {"access_token": ACCESS_TOKEN}
+    response = requests.post(FB_PERSONA_URL, params=auth, json=payload)
+    persona_id =  response.json()["id"]
+    print ("I'm in function ",persona_id)
+    return persona_id
 
 # We will receive messages that Facebook sends our bot at this endpoint
 def check_one_time_notif():
@@ -85,7 +91,7 @@ def receive_message():
     else:
         # get whatever message a user sent the bot
         output = request.get_json()
-        print(output)
+        #print(output)
         for event in output["entry"]:
             messaging = event["messaging"]
             for message in messaging:
@@ -108,6 +114,7 @@ def receive_message():
                 elif status//10 == 1:
                     if status % 10 == 0:
                         cur_speaker = ""
+                        persona_id_cur = ""
                         person = db.paired_peeps.find_one({"fp": message["sender"]["id"]})
                         if message.get("message"):
                             if person is None:
@@ -116,9 +123,11 @@ def receive_message():
                                 )
                                 recipient_id = person["fp"]
                                 cur_speaker = "sp"
+                                persona_id_cur = person["persona_id_sp"]
                             else:
                                 recipient_id = person["sp"]
                                 cur_speaker = "fp"
+                                persona_id_cur = person["persona_id_fp"]
                             response_sent_text = message["message"]["text"]
                             if (response_sent_text=="/end"):
                                 db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
@@ -193,6 +202,7 @@ def receive_message():
                                     "message": {
                                         "text": response_sent_text
                                     },
+                                    "persona_id": persona_id_cur
                                 }
                             print("mesages sent")
                             send_request(payload)
@@ -291,13 +301,6 @@ def send_message(recipient_id, text, message_rec):
                 "username": user_name,
             }
             db.pool.insert_one(temp_pool)
-            # pool.append(
-            #     {
-            #         "id": recipient_id,
-            #         "timestamp": datetime.datetime.now(),
-            #         "username": user_name,
-            #     }
-            # )
             
             payload = {
                 "message": {
@@ -313,13 +316,22 @@ def send_message(recipient_id, text, message_rec):
             if partner_id != recipient_id:
                 # pool[:] = []
                 db.pool.remove({"id" : partner_id})
+                persona_id_self = send_persona_request({
+                    "name":user_name,
+                    "profile_picture_url":"https://image.shutterstock.com/image-photo/young-girl-making-funny-faces-260nw-343761566.jpg"
+                    })
                 payload_partner = {
                     "message": {
                         "text": "Congrats! You have been paired with " + str(user_name)
                     },
                     "recipient": {"id": partner_id},
                     "notification_type": "regular",
+                    "persona_id": persona_id_self
                 }
+                persona_id = send_persona_request({
+                    "name":partner_username,
+                    "profile_picture_url":"https://image.shutterstock.com/image-photo/young-girl-making-funny-faces-260nw-343761566.jpg"
+                    })
                 payload = {
                     "message": {
                         "text": "Congrats! You have been paired with "
@@ -327,12 +339,15 @@ def send_message(recipient_id, text, message_rec):
                     },
                     "recipient": {"id": recipient_id},
                     "notification_type": "regular",
+                    "persona_id": persona_id
                 }
+                print (persona_id_self,persona_id)
                 db.user_status.update_one(
                     {"user": recipient_id}, {"$set": {"status": 10}}
                 )
+
                 db.user_status.update_one({"user": partner_id}, {"$set": {"status": 10}})
-                db.paired_peeps.insert_one({"fp": recipient_id, "sp": partner_id, "timestamp_fp" : datetime.datetime.now(),"timestamp_sp" : datetime.datetime.now()})
+                db.paired_peeps.insert_one({"fp": recipient_id, "sp": partner_id, "persona_id_sp": persona_id,"persona_id_fp": persona_id_self,"timestamp_fp" : datetime.datetime.now(),"timestamp_sp" : datetime.datetime.now()})
                 send_request(payload_partner)
             else:
                 payload = {
@@ -392,12 +407,6 @@ def send_message(recipient_id, text, message_rec):
         elif message_rec["quick_reply"]["payload"] == "bad":
             payload = {
                 "message": {"text": "We promise to be better next time"},
-                "recipient": {"id": recipient_id},
-                "notification_type": "regular",
-            }
-        elif message_rec["quick_reply"]["payload"] in ["bully","rude","troll"]:
-            payload = {
-                "message": {"text": "Please explain the issue you faced so that the admins can review and take adequate steps."},
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
