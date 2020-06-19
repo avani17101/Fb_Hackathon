@@ -1,7 +1,7 @@
 def find_related_urls(title,website):
     """
     args: title of article
-    returns: links of  most related articles from trusted sources
+    returns: links of  most related articles
     """
     try: 
         from googlesearch import search 
