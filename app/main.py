@@ -153,6 +153,7 @@ def receive_message():
                                     else:
                                         reported_person =  person["fp"]
                                     print(reported_person)
+                                    db.report.insert_one({"reported_user":reported_person,"reporting_user":message["sender"]["id"],"issue":""})
                                     payload = {
                                         "recipient": {"id": message["sender"]["id"]},
                                         "notification_type": "regular",
@@ -248,12 +249,13 @@ def handle_postback(recipient_id, postback):
     temp_dict["text"] = ""
     if payload in ['harass', 'rude', 'troll']:
         db.user_status.update_one({"user": recipient_id}, {"$set": {"status": 11}})
-        send_message(recipient_id, "Describe ur problem to the admins", temp_dict)
+        send_message(recipient_id, "We are putting you through live chat with one of the admins. Explain your isssue so that we can take necessary steps.", temp_dict)
         handover_payload = {
         "target_app_id": 263902037430900,
         "recipient":{"id":recipient_id},
         "metadata": "Redirecting to a live agent..."
         }
+        db.report.update_one({"reporting_user":recipient_id},{"$set": {"issue": payload}})
         send_handover_request(handover_payload)
 
 
@@ -263,11 +265,6 @@ def verify_fb_token(token_sent):
     if token_sent == VERIFY_TOKEN:
         return request.args.get("hub.challenge")
     return "Invalid verification token"
-
-
-
-
-
 
 # chooses a random message to send to the user
 def get_message():
