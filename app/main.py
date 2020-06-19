@@ -10,15 +10,15 @@ from .handle_standby import *
 from .fb_requests import *
 import requests
 import datetime
-from .quick_replies import replies, generate_app_slots, generate_reminder_slots
+from .quick_replies import *
 from apscheduler.schedulers.background import BackgroundScheduler
+from .book_appointment import *
 
 MONGO_URL = DB_URL
 
 app = Flask(__name__)
 client = pymongo.MongoClient(MONGO_URL)
 db = client.friend_indeed
-
 ACCESS_TOKEN = ACCTOKEN
 VERIFY_TOKEN = VERTOKEN
 pool = []
@@ -50,7 +50,7 @@ def one_minute_jobs():
             }
             send_request(payload)
     
-        
+
 
 def check_id(id):
     check_user = db.user_status.find_one({"user": id})
@@ -69,12 +69,13 @@ sched = BackgroundScheduler()
 sched.add_job(one_minute_jobs, "cron", minute="0-59")
 sched.start()
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/main", methods=["GET", "POST"])
 def receive_message():
     if request.method == "GET":
         """Before allowing people to message your bot, Facebook has implemented a verify token
         that confirms all requests that your bot receives came from Facebook."""
         token_sent = request.args.get("hub.verify_token")
+        print("abc")
         return verify_fb_token(token_sent)
     # if the request was not get, it must be POST and we can just proceed with sending a message back to user
     else:
@@ -227,13 +228,14 @@ def handle_optin(recipient_id, optin):
     elif payload.startswith("reminder"):
         payload_list = payload.split(" ")
         one_time_notif_dict = {
-            "app_time": payload_list[2],
-            "notif_time": payload_list[1],
+            "app_time": payload_list[3],
+            "notif_time": payload_list[2],
+            "date" : payload_list[1],
             "notif_token": optin["one_time_notif_token"],
         }
         db.one_time_notif.insert_one(one_time_notif_dict)
         send_message(
-            recipient_id, "You will be notified at " + payload_list[1], temp_dict,
+            recipient_id, "You will be notified at " + payload_list[2]+ " on "+payload_list[1], temp_dict,
         )
 
 def handle_postback(recipient_id, postback):
@@ -350,21 +352,8 @@ def send_message(recipient_id, text, message_rec):
                     "notification_type": "regular",
                 }
     elif message_rec["text"] == "Book an appointment":
-        cur_slots = []
-        available_slots = []
-        psych = db.psych.find_one({"name": "Dr. Dipanwita"})
-        cur_slots = psych["time"]
-        available_slots = psych["is_available"]
-        payload = {
-            "message": {
-                "text": "Pick a time slot when you'll be available:",
-                "quick_replies": generate_app_slots(cur_slots, available_slots),
-            },
-            "recipient": {"id": recipient_id},
-            "messaging_type": "RESPONSE",
-            "notification_type": "regular",
-        }
-        print(payload)
+        payload = book_appointment("", recipient_id, db)
+
     elif message_rec["text"] == "color":
         payload = {
             "recipient": {"id": recipient_id},
@@ -402,19 +391,9 @@ def send_message(recipient_id, text, message_rec):
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
-        elif message_rec["quick_reply"]["payload"].startswith("appointment"):
-            app_time = datetime.datetime.strptime(
-                message_rec["quick_reply"]["payload"].split(" ")[1], "%H:%M"
-            )
+        elif message_rec["quick_reply"]["payload"].startswith(("date","time","reminder")):
+            payload = book_appointment(message_rec["quick_reply"]["payload"], recipient_id, db)
 
-            payload = {
-                "recipient": {"id": recipient_id},
-                "messaging_type": "RESPONSE",
-                "message": {
-                    "text": "Pick a reminder time:",
-                    "quick_replies": generate_reminder_slots(app_time),
-                },
-            }
         elif message_rec["quick_reply"]["payload"].startswith("reminder"):
             payload = {
                 "recipient": {"id": recipient_id},
