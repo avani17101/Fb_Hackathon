@@ -8,6 +8,7 @@ from .config import ACCTOKEN, VERTOKEN, DB_URL
 from .data import anonymous_usernames
 from .handle_standby import *
 from .fb_requests import *
+from .psych import *
 import requests
 import datetime
 from .quick_replies import replies, generate_app_slots, generate_reminder_slots
@@ -69,7 +70,7 @@ sched = BackgroundScheduler()
 sched.add_job(one_minute_jobs, "cron", minute="0-59")
 sched.start()
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/main", methods=["GET", "POST"])
 def receive_message():
     if request.method == "GET":
         """Before allowing people to message your bot, Facebook has implemented a verify token
@@ -101,6 +102,11 @@ def receive_message():
                             handle_postback(recipient_id, message["postback"])
                         elif message.get("optin"):
                             handle_optin(recipient_id, message["optin"])
+                    elif status//10==9:
+                        if (message.get("message")):
+                            psych_text = message["message"]["text"]
+                            psych_id = (db.user_status.find_one({"status":90}))["_id"]
+                            psych_send_message(psych_text,recipient_id,message["message"],psych_id,db)
                     elif status//10 == 1:
                         if status % 10 == 0:
                             cur_speaker = ""
