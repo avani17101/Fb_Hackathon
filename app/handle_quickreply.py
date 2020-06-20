@@ -1,5 +1,7 @@
 from .book_appointment import *
-def handle_quickreply(recipient_id, qreply):
+from .send_message import *
+
+def handle_quickreply(db, recipient_id, qreply):
     if qreply == "red":
         payload = {
             "message": {"text": "You chose red"},
@@ -32,19 +34,4 @@ def handle_quickreply(recipient_id, qreply):
         }
     elif qreply.startswith(("date","time","reminder")):
         payload = book_appointment(qreply, recipient_id, db)
-
-    elif qreply.startswith("reminder"):
-        payload = {
-            "recipient": {"id": recipient_id},
-            "message": {
-                "attachment": {
-                    "type": "template",
-                    "payload": {
-                        "template_type": "one_time_notif_req",
-                        "title": 'Select "notify me" to confirm the reminder?',
-                        "payload": qreply,
-                    },
-                }
-            },
-        }
     return payload

@@ -65,4 +65,5 @@ def book_appointment(value, recipient_id, db):
                     }
                 },
             }
+        print(payload)
         return payload

@@ -1,4 +1,11 @@
-from .fb_requests import send_request
+from .fb_requests import *
+from .send_message import *
+
+def psych_init(db,recipient_id,message):
+	if (message.get("message")):
+		psych_text = message["message"]["text"]
+		psych_id = (db.user_status.find_one({"status":90}))["_id"]
+		psych_send_message(psych_text,recipient_id,message["message"],psych_id,db)
 
 def psych_send_message(text,recipient_id,message_rec,psych_id,db):
 	if message_rec["text"] == "Display schedule":

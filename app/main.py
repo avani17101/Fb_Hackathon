@@ -14,6 +14,14 @@ import datetime
 from .quick_replies import *
 from apscheduler.schedulers.background import BackgroundScheduler
 from .book_appointment import *
+from .talk_to_someone import *
+from .handle_optin import *
+from .handle_postback import *
+from .handle_quickreply import *
+from .handle_normal_message import *
+from .random_message import *
+from .send_message import *
+
 
 MONGO_URL = DB_URL
 
@@ -41,15 +49,16 @@ def check_one_time_notif():
 def one_minute_jobs():
     minute_delta = datetime.timedelta(hours=0, minutes=1, seconds=0)
     removed = []
-    for i in db.pool.find({}):
-        if datetime.datetime.now() - i["timestamp"] > minute_delta:
-            db.pool.remove({"id" : i["id"]})
-            print("yayy1")
-            payload = {
-                "recipient": {"id": i["id"]},
-                "message": {"text": "Sorry! We couldn't find anyone at this moment. Try again after some time."},
-            }
-            send_request(payload)
+    sorry_text(db,minute_delta)
+    # for i in db.pool.find({}):
+    #     if datetime.datetime.now() - i["timestamp"] > minute_delta:
+    #         db.pool.remove({"id" : i["id"]})
+    #         print("yayy1")
+    #         payload = {
+    #             "recipient": {"id": i["id"]},
+    #             "message": {"text": "Sorry! We couldn't find anyone at this moment. Try again after some time."},
+    #         }
+    #         send_request(payload)
     
 
 
@@ -91,23 +100,13 @@ def receive_message():
                     status = check_id(message["sender"]["id"])
                     if status//10 == 0:
                         if message.get("message"):
-                            # Facebook Messenger ID for user so we know where to send response back to
-                            if (message["message"].get("attachments")):
-                                print("Attachment not supported")
-                            if message["message"].get("text"):
-                                response_sent_text = get_message()
-                                send_message(
-                                    recipient_id, response_sent_text, message["message"]
-                                )
+                            handle_normal_message(db,recipient_id,message)
                         elif message.get("postback"):
-                            handle_postback(recipient_id, message["postback"])
+                            handle_postback(db, recipient_id, message["postback"])
                         elif message.get("optin"):
-                            handle_optin(recipient_id, message["optin"])
+                            handle_optin(db, recipient_id, message["optin"])
                     elif status//10==9:
-                        if (message.get("message")):
-                            psych_text = message["message"]["text"]
-                            psych_id = (db.user_status.find_one({"status":90}))["_id"]
-                            psych_send_message(psych_text,recipient_id,message["message"],psych_id,db)
+                        psych_init(db,recipient_id,message)
                     elif status//10 == 1:
                         if status % 10 == 0:
                             cur_speaker = ""
@@ -210,212 +209,12 @@ def receive_message():
                             db.user_status.update_one({"user": message["sender"]["id"]}, {"$set": {"status": 0}})
                             if message.get("message"):
                                 print(message["message"]["text"])
-                                
-                                
-                            #     db.report.insert_one(report)
-                            #     temp_dict = {}
-                            #     temp_dict["text"] = "" 
-                           #     send_message(message["sender"]["id"], "Your report has been noted. We will come back to you soon. Take care!", )
+                            
             elif (event.get("standby")):
                 handle_standby(event["standby"])
     return "Message Processed"
 
-
-def handle_optin(recipient_id, optin):
-    payload = optin["payload"]
-    notif_token = optin["one_time_notif_token"]
-    temp_dict = {}
-    temp_dict["text"] = ""
-    if payload == "notif":
-        send_message(
-            recipient_id,
-            "One time notif token: " + str(optin["one_time_notif_token"]),
-            temp_dict,
-        )
-    elif payload.startswith("reminder"):
-        payload_list = payload.split(" ")
-        one_time_notif_dict = {
-            "app_time": payload_list[3],
-            "notif_time": payload_list[2],
-            "date" : payload_list[1],
-            "notif_token": optin["one_time_notif_token"],
-        }
-        db.one_time_notif.insert_one(one_time_notif_dict)
-        send_message(
-            recipient_id, "You will be notified at " + payload_list[2]+ " on "+payload_list[1], temp_dict,
-        )
-
-def handle_postback(recipient_id, postback):
-    payload = postback["payload"]
-    temp_dict = {}
-    temp_dict["text"] = ""
-    if payload in ['harass', 'rude', 'troll']:
-        db.user_status.update_one({"user": recipient_id}, {"$set": {"status": 11}})
-        send_message(recipient_id, "We are putting you through live chat with one of the admins. Explain your isssue so that we can take necessary steps.", temp_dict)
-        handover_payload = {
-        "target_app_id": 263902037430900,
-        "recipient":{"id":recipient_id},
-        "metadata": "Redirecting to a live agent..."
-        }
-        db.report.update_one({"reporting_user":recipient_id},{"$set": {"issue": payload}})
-        send_handover_request(handover_payload)
-
-
 def verify_fb_token(token_sent):
-    # take token sent by facebook and verify it matches the verify token you sent
-    # if they match, allow the request, else return an error
     if token_sent == VERIFY_TOKEN:
         return request.args.get("hub.challenge")
     return "Invalid verification token"
-
-# chooses a random message to send to the user
-def get_message():
-    sample_responses = [
-        "You are a dirty fellow!",
-        "Of course I talk like an idiot. How else would u understand me?",
-        "I made a pencil with two erasers. It was pointless.",
-        "What's brown and sticky? A stick.",
-    ]
-    # return selected item to the user
-    return random.choice(sample_responses)
-
-
-def send_message(recipient_id, text, message_rec):
-    # sends user the text message provided via input response parameter
-    """Send a response to Facebook"""
-    if message_rec["text"] == "Talk to someone":
-        user_name = (
-            "Anonymous "
-            + anonymous_usernames[random.randint(0, len(anonymous_usernames) - 1)]
-        )
-        pool = db.pool.find({})
-        print(user_name)
-        if pool.count() == 0:
-            print("Adding to pool")
-            temp_pool = {
-                "id": recipient_id,
-                "timestamp": datetime.datetime.now(),
-                "username": user_name,
-            }
-            db.pool.insert_one(temp_pool)
-            
-            payload = {
-                "message": {
-                    "text": "Please wait for 1 min for us to pair you with someone else"
-                },
-                "recipient": {"id": recipient_id},
-                "notification_type": "regular",
-            }
-        else:
-            print("Someone is there in pool")
-            partner_id = pool[0]["id"]
-            partner_username = pool[0]["username"]
-            if partner_id != recipient_id:
-                # pool[:] = []
-                db.pool.remove({"id" : partner_id})
-                persona_id_self = send_persona_request({
-                    "name":user_name,
-                    "profile_picture_url":"https://image.shutterstock.com/image-photo/young-girl-making-funny-faces-260nw-343761566.jpg"
-                    })
-                payload_partner = {
-                    "message": {
-                        "text": "Congrats! You have been paired with " + str(user_name)
-                    },
-                    "recipient": {"id": partner_id},
-                    "notification_type": "regular",
-                    "persona_id": persona_id_self
-                }
-                persona_id = send_persona_request({
-                    "name":partner_username,
-                    "profile_picture_url":"https://image.shutterstock.com/image-photo/young-girl-making-funny-faces-260nw-343761566.jpg"
-                    })
-                payload = {
-                    "message": {
-                        "text": "Congrats! You have been paired with "
-                        + str(partner_username)
-                    },
-                    "recipient": {"id": recipient_id},
-                    "notification_type": "regular",
-                    "persona_id": persona_id
-                }
-                print (persona_id_self,persona_id)
-                db.user_status.update_one(
-                    {"user": recipient_id}, {"$set": {"status": 10}}
-                )
-
-                db.user_status.update_one({"user": partner_id}, {"$set": {"status": 10}})
-                db.paired_peeps.insert_one({"fp": recipient_id, "sp": partner_id, "persona_id_sp": persona_id,"persona_id_fp": persona_id_self,"timestamp_fp" : datetime.datetime.now(),"timestamp_sp" : datetime.datetime.now()})
-                send_request(payload_partner)
-            else:
-                payload = {
-                    "message": {
-                        "text": "Please wait for 1 min for us to pair you with someone else"
-                    },
-                    "recipient": {"id": recipient_id},
-                    "notification_type": "regular",
-                }
-    elif message_rec["text"] == "Book an appointment":
-        payload = book_appointment("", recipient_id, db)
-
-    elif message_rec["text"] == "color":
-        payload = {
-            "recipient": {"id": recipient_id},
-            "messaging_type": "RESPONSE",
-            "message": {"text": "Pick a color:", "quick_replies": replies["color"]},
-        }
-    elif message_rec.get("quick_reply"):
-        payload = handle_quickreply(recipient_id, message_rec["quick_reply"]["payload"])
-        # if message_rec["quick_reply"]["payload"] == "red":
-        #     payload = {
-        #         "message": {"text": "You chose red"},
-        #         "recipient": {"id": recipient_id},
-        #         "notification_type": "regular",
-        #     }
-        # elif message_rec["quick_reply"]["payload"] == "green":
-        #     payload = {
-        #         "message": {"text": "You chose green"},
-        #         "recipient": {"id": recipient_id},
-        #         "notification_type": "regular",
-        #     }
-        # elif message_rec["quick_reply"]["payload"] == "good":
-        #     payload = {
-        #         "message": {"text": "We look forward to it!"},
-        #         "recipient": {"id": recipient_id},
-        #         "notification_type": "regular",
-        #     }
-        # elif message_rec["quick_reply"]["payload"] == "medium":
-        #     payload = {
-        #         "message": {"text": "Thanks"},
-        #         "recipient": {"id": recipient_id},
-        #         "notification_type": "regular",
-        #     }
-        # elif message_rec["quick_reply"]["payload"] == "bad":
-        #     payload = {
-        #         "message": {"text": "We promise to be better next time"},
-        #         "recipient": {"id": recipient_id},
-        #         "notification_type": "regular",
-        #     }
-        # elif message_rec["quick_reply"]["payload"].startswith(("date","time","reminder")):
-        #     payload = book_appointment(message_rec["quick_reply"]["payload"], recipient_id, db)
-
-        # elif message_rec["quick_reply"]["payload"].startswith("reminder"):
-        #     payload = {
-        #         "recipient": {"id": recipient_id},
-        #         "message": {
-        #             "attachment": {
-        #                 "type": "template",
-        #                 "payload": {
-        #                     "template_type": "one_time_notif_req",
-        #                     "title": 'Select "notify me" to confirm the reminder?',
-        #                     "payload": message_rec["quick_reply"]["payload"],
-        #                 },
-        #             }
-        #         },
-        #     }
-    else:
-        payload = {
-            "message": {"text": text},
-            "recipient": {"id": recipient_id},
-            "notification_type": "regular",
-        }
-    send_request(payload)

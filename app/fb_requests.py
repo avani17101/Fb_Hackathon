@@ -8,6 +8,7 @@ FB_TAKE_URL = "https://graph.facebook.com/v7.0/me/take_thread_control"
 def send_request(payload):
     auth = {"access_token": ACCTOKEN}
     response = requests.post(FB_API_URL, params=auth, json=payload)
+    print(response, response.json())
     return "success"
 
 def send_persona_request(payload):
