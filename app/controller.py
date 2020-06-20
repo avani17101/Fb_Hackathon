@@ -1,3 +1,4 @@
+import random
 def welcome():
     """This function generates welcome messages that voice.py functions use to welcome the user."""
     greetings = [

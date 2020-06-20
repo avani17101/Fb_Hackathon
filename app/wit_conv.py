@@ -26,10 +26,4 @@ print(wit_response("I am happyyy"))
 
 # response = requests.post('http://curl', headers=headers, data=data)
 
-import requests
 
-headers = {
-    'Authorization': 'Bearer $access_token',
-}
-
-response = requests.get('http://curl//api.wit.ai/intents?v=20200513' , headers=headers)

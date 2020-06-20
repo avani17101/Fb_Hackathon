@@ -10,8 +10,8 @@ import requests
 import datetime
 from .quick_replies import replies, generate_app_slots, generate_reminder_slots
 from apscheduler.schedulers.background import BackgroundScheduler
-from wit_conv import wit_response
-from conversation import *
+from .wit_conv import wit_response
+from .conversation import *
 MONGO_URL = DB_URL
 
 app = Flask(__name__)
