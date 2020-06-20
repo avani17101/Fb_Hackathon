@@ -81,6 +81,53 @@ sched = BackgroundScheduler()
 sched.add_job(one_minute_jobs, "cron", minute="0-59")
 sched.start()
 
+def remove_conncetion(person,message,recipient_id):
+    db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
+    db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
+    db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 0}})
+    if person["fp"] == message["sender"]["id"]:
+        reported_person =  person["sp"]
+    else:
+        reported_person =  person["fp"]
+    print(reported_person)
+    payload = {
+        "recipient": {"id": message["sender"]["id"]},
+        "notification_type": "regular",
+        "message": {
+            "attachment":{
+            "type":"template",
+            "payload":{
+                "template_type":"button",
+                "text":"You reported your partner. Help us identify the issue!",
+                "buttons":[
+                    {
+                        "type":"postback",
+                        "title":"Harassment/bullying",
+                        "payload" : "harass"
+                    },
+                    {
+                        "type":"postback",
+                        "title":"Rude/insensitive",
+                        "payload" : "rude"
+                    },
+                    {
+                        "type":"postback",
+                        "title":"Prankster/troll",
+                        "payload" : "troll"
+                    }
+                ]
+                }
+            }
+        },
+    }
+    payload_partner = {
+    "recipient": {"id": recipient_id},
+    "notification_type": "regular",
+    "message": {
+        "text": "We are sorry but your partner reported you. The admins will review the report and get back to you."
+    },
+    }
+    return payload
 @app.route("/", methods=["GET", "POST"])
 def receive_message():
     if request.method == "GET":
@@ -150,51 +197,8 @@ def receive_message():
                                 }
                                 send_request(payload_partner)
                             elif (response_sent_text=="/report"):
-                                db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
-                                db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
-                                db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 0}})
-                                if person["fp"] == message["sender"]["id"]:
-                                    reported_person =  person["sp"]
-                                else:
-                                    reported_person =  person["fp"]
-                                print(reported_person)
-                                payload = {
-                                    "recipient": {"id": message["sender"]["id"]},
-                                    "notification_type": "regular",
-                                    "message": {
-                                        "attachment":{
-                                        "type":"template",
-                                        "payload":{
-                                            "template_type":"button",
-                                            "text":"You reported your partner. Help us identify the issue!",
-                                            "buttons":[
-                                                {
-                                                    "type":"postback",
-                                                    "title":"Harassment/bullying",
-                                                    "payload" : "harass"
-                                                },
-                                                {
-                                                    "type":"postback",
-                                                    "title":"Rude/insensitive",
-                                                    "payload" : "rude"
-                                                },
-                                                {
-                                                    "type":"postback",
-                                                    "title":"Prankster/troll",
-                                                    "payload" : "troll"
-                                                }
-                                            ]
-                                            }
-                                        }
-                                    },
-                                }
-                                payload_partner = {
-                                "recipient": {"id": recipient_id},
-                                "notification_type": "regular",
-                                "message": {
-                                    "text": "We are sorry but your partner reported you. The admins will review the report and get back to you."
-                                },
-                                }
+                                remove_conncetion(person,message,recipient_id)
+
                                 send_request(payload_partner)
                             else:
                                 payload = {
@@ -409,8 +413,30 @@ def send_message(recipient_id, text, message_rec):
             "notification_type": "regular",
         }
        
-   
-    elif message_rec["text"] == "Book an appointment":
+    if(entity=="hatespeech" or entity=="threat" or entity=="privacyViolation"):
+        # end connection: not implemented yet
+        payload = {
+            "message": {"text": "We are sorry this connection voilates our code of conduct by using threat/hatespeech and it will be reported"},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        }
+    if(entity== 'jokes'):
+        url = suggest_songs()
+        payload = {
+            "message": {"text": "here is joke for you, enjoy!"},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        } 
+    if(entity== 'memes'):
+        url = suggest_songs()
+        payload = {
+            "message": {"text": "here is a funny meme for you!"},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        } 
+
+    if(entity == "psychologist_schduling"):
+        #elif message_rec["text"] == "Book an appointment":
         cur_slots = []
         available_slots = []
         psych = db.psych.find_one({"name": "Dr. Dipanwita"})
