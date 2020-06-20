@@ -5,7 +5,7 @@ import os
 from flask import Flask, request
 from flask_pymongo import pymongo
 from .config import ACCTOKEN, VERTOKEN, DB_URL
-from .data import anonymous_usernames
+from .data import *
 from .handle_standby import *
 from .fb_requests import *
 from .psych import *
@@ -14,6 +14,7 @@ import datetime
 from .quick_replies import *
 from apscheduler.schedulers.background import BackgroundScheduler
 from .book_appointment import *
+from .utils import *
 
 MONGO_URL = DB_URL
 
@@ -37,6 +38,20 @@ def check_one_time_notif():
             "message": {"text": "You have an appointment at " + i["app_time"]},
         }
         send_request(payload)
+def check_appointment():
+    time_now = datetime.datetime.now().strftime("%H:%M")
+    date_now = datetime.datetime.now().strftime("%d.%m.%Y")
+    #print ("yay")
+    print (time_now,date_now)
+    for i in db.appointment.find({"time":time_now,"date":date_now,"appointment_status":"1"}):
+        therapist = i["therapist_id"]
+        user = i["appointed_id"]
+        db.user_status.update_one({"user":user},{"$set":{"status":30}})
+        db.user_status.update_one({"_id":therapist},{"$set":{"status":91}})
+        therapist_id = (db.user_status.find_one({"_id":therapist}))["user"]
+        print (therapist_id,user)
+        db.paired_peeps.insert_one({"fp": therapist_id, "sp": user, "timestamp_fp" : datetime.datetime.now(),"timestamp_sp" : datetime.datetime.now()})
+
 
 def one_minute_jobs():
     minute_delta = datetime.timedelta(hours=0, minutes=1, seconds=0)
@@ -56,7 +71,7 @@ def one_minute_jobs():
 def check_id(id):
     check_user = db.user_status.find_one({"user": id})
     if check_user is None:
-        db.user_status.insert_one({"user": id, "status": 0})
+        db.user_status.insert_one({"user": id, "status": 0,"joke_calls":0})
         return 0
     else:
         return check_user["status"]
@@ -70,6 +85,10 @@ sched = BackgroundScheduler()
 sched.add_job(one_minute_jobs, "cron", minute="0-59")
 sched.start()
 
+sched2 = BackgroundScheduler()
+sched2.add_job(check_appointment, "cron", minute="0,30")
+sched2.start()
+
 @app.route("/main", methods=["GET", "POST"])
 def receive_message():
     if request.method == "GET":
@@ -82,7 +101,7 @@ def receive_message():
     else:
         # get whatever message a user sent the bot
         output = request.get_json()
-        print(output)
+        #print(output)
         for event in output["entry"]:
             if (event.get("messaging")):
                 messaging = event["messaging"]
@@ -103,11 +122,6 @@ def receive_message():
                             handle_postback(recipient_id, message["postback"])
                         elif message.get("optin"):
                             handle_optin(recipient_id, message["optin"])
-                    elif status//10==9:
-                        if (message.get("message")):
-                            psych_text = message["message"]["text"]
-                            psych_id = (db.user_status.find_one({"status":90}))["_id"]
-                            psych_send_message(psych_text,recipient_id,message["message"],psych_id,db)
                     elif status//10 == 1:
                         if status % 10 == 0:
                             cur_speaker = ""
@@ -210,12 +224,65 @@ def receive_message():
                             db.user_status.update_one({"user": message["sender"]["id"]}, {"$set": {"status": 0}})
                             if message.get("message"):
                                 print(message["message"]["text"])
-                                
-                                
-                            #     db.report.insert_one(report)
-                            #     temp_dict = {}
-                            #     temp_dict["text"] = "" 
-                           #     send_message(message["sender"]["id"], "Your report has been noted. We will come back to you soon. Take care!", )
+                    elif status//10==9:
+                        if (status%10==1):
+                            cur_speaker = ""
+                            persona_id_cur = ""
+                            person = db.paired_peeps.find_one({"fp": message["sender"]["id"]})
+                            if message.get("message"):
+                                response_sent_text = message["message"]["text"]
+                                if (response_sent_text=="/end"):
+                                        db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
+                                        db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
+                                        db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 90}})
+                                        payload = {
+                                        "recipient": {"id": person["fp"]},
+                                        "notification_type": "regular",
+                                        "message": {
+                                            "text": "The chat ended. Thank you for your time!"
+                                        },
+                                        }
+                                else:
+                                    payload = {
+                                        "recipient": {"id": person["sp"]},
+                                        "notification_type": "regular",
+                                        "message": {
+                                            "text": response_sent_text
+                                        }
+                                    }
+                                send_request(payload)
+                        else:
+                            if (message.get("message")):
+                                psych_text = message["message"]["text"]
+                                psych_id = (db.user_status.find_one({"status":90}))["_id"]
+                                psych_send_message(psych_text,recipient_id,message["message"],psych_id,db)
+                    elif status//10==3:
+                        cur_speaker = ""
+                        persona_id_cur = ""
+                        person = db.paired_peeps.find_one({"sp": message["sender"]["id"]})
+                        if message.get("message"):
+                            response_sent_text = message["message"]["text"]
+                            if (response_sent_text=="/end"):
+                                db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
+                                db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
+                                db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 90}})
+                                payload = {
+                                "recipient": {"id": person["sp"]},
+                                "notification_type": "regular",
+                                "message": {
+                                    "text": "The chat ended. Hope we could help you."
+                                },
+                                }
+                            else:
+                                payload = {
+                                        "recipient": {"id": person["fp"]},
+                                        "notification_type": "regular",
+                                        "message": {
+                                            "text": response_sent_text
+                                        }
+                                    }
+                            send_request(payload)
+
             elif (event.get("standby")):
                 handle_standby(event["standby"])
     return "Message Processed"
@@ -284,9 +351,10 @@ def send_message(recipient_id, text, message_rec):
     # sends user the text message provided via input response parameter
     """Send a response to Facebook"""
     if message_rec["text"] == "Talk to someone":
+        userind = random.randint(0, len(anonymous_usernames) - 1)
         user_name = (
             "Anonymous "
-            + anonymous_usernames[random.randint(0, len(anonymous_usernames) - 1)]
+            + anonymous_usernames[userind]
         )
         pool = db.pool.find({})
         print(user_name)
@@ -296,6 +364,7 @@ def send_message(recipient_id, text, message_rec):
                 "id": recipient_id,
                 "timestamp": datetime.datetime.now(),
                 "username": user_name,
+                "image_url": persona_urls[userind]
             }
             db.pool.insert_one(temp_pool)
             
@@ -310,12 +379,13 @@ def send_message(recipient_id, text, message_rec):
             print("Someone is there in pool")
             partner_id = pool[0]["id"]
             partner_username = pool[0]["username"]
+            partner_pic = pool[0]["image_url"]
             if partner_id != recipient_id:
                 # pool[:] = []
                 db.pool.remove({"id" : partner_id})
                 persona_id_self = send_persona_request({
                     "name":user_name,
-                    "profile_picture_url":"https://image.shutterstock.com/image-photo/young-girl-making-funny-faces-260nw-343761566.jpg"
+                    "profile_picture_url": persona_urls[userind]
                     })
                 payload_partner = {
                     "message": {
@@ -327,7 +397,7 @@ def send_message(recipient_id, text, message_rec):
                 }
                 persona_id = send_persona_request({
                     "name":partner_username,
-                    "profile_picture_url":"https://image.shutterstock.com/image-photo/young-girl-making-funny-faces-260nw-343761566.jpg"
+                    "profile_picture_url": partner_pic
                     })
                 payload = {
                     "message": {
@@ -357,6 +427,8 @@ def send_message(recipient_id, text, message_rec):
     elif message_rec["text"] == "Book an appointment":
         payload = book_appointment("", recipient_id, db)
 
+    elif message_rec["text"] == "Get a joke":
+        payload = jokes_util(recipient_id,db)
     elif message_rec["text"] == "color":
         payload = {
             "recipient": {"id": recipient_id},

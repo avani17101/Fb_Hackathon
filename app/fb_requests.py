@@ -13,8 +13,8 @@ def send_request(payload):
 def send_persona_request(payload):
     auth = {"access_token": ACCTOKEN}
     response = requests.post(FB_PERSONA_URL, params=auth, json=payload)
+    print (response.json())
     persona_id =  response.json()["id"]
-    print ("I'm in function ",persona_id)
     return persona_id
 def send_handover_request(payload):
     auth = {"access_token": ACCTOKEN}
