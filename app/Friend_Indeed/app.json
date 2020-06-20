@@ -1,0 +1,7 @@
+{
+    "version": 20200513,
+    "zip-command": "zip Friend_Indeed.zip Friend_Indeed\/app.json Friend_Indeed\/entities\/*.json Friend_Indeed\/intents\/*.json Friend_Indeed\/traits\/*.json Friend_Indeed\/utterances\/*.json",
+    "name": "Friend_Indeed",
+    "lang": "en",
+    "timezone": "America\/Los_Angeles"
+}

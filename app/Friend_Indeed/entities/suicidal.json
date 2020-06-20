@@ -1,0 +1,78 @@
+{
+    "name": "suicidal",
+    "roles": [
+        "suicidal"
+    ],
+    "lookups": [
+        "free-text",
+        "keywords"
+    ],
+    "keywords": [
+        {
+            "keyword": "I am worthless",
+            "synonyms": [
+                "i am worthless"
+            ]
+        },
+        {
+            "keyword": "dont have a reason to live",
+            "synonyms": [
+                "dont have a reason to live"
+            ]
+        },
+        {
+            "keyword": "hate everything going on life",
+            "synonyms": [
+                "hate everything going on life"
+            ]
+        },
+        {
+            "keyword": "hate him",
+            "synonyms": [
+                "hate him"
+            ]
+        },
+        {
+            "keyword": "hate my life",
+            "synonyms": [
+                "hate my life"
+            ]
+        },
+        {
+            "keyword": "how to die",
+            "synonyms": [
+                "how to die"
+            ]
+        },
+        {
+            "keyword": "life is worthless",
+            "synonyms": [
+                "life is worthless"
+            ]
+        },
+        {
+            "keyword": "want to die",
+            "synonyms": [
+                "want to die"
+            ]
+        },
+        {
+            "keyword": "want to end my life",
+            "synonyms": [
+                "want to end my life"
+            ]
+        },
+        {
+            "keyword": "what is point of living",
+            "synonyms": [
+                "what is point of living"
+            ]
+        },
+        {
+            "keyword": "wrold is useless",
+            "synonyms": [
+                "wrold is useless"
+            ]
+        }
+    ]
+}

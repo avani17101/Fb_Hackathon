@@ -1,0 +1,54 @@
+{
+    "name": "Depressed",
+    "roles": [
+        "Depressed"
+    ],
+    "lookups": [
+        "free-text",
+        "keywords"
+    ],
+    "keywords": [
+        {
+            "keyword": "broken",
+            "synonyms": [
+                "broken"
+            ]
+        },
+        {
+            "keyword": "depressed",
+            "synonyms": [
+                "depressed"
+            ]
+        },
+        {
+            "keyword": "restless",
+            "synonyms": [
+                "restless"
+            ]
+        },
+        {
+            "keyword": "sad",
+            "synonyms": [
+                "sad"
+            ]
+        },
+        {
+            "keyword": "shaken",
+            "synonyms": [
+                "shaken"
+            ]
+        },
+        {
+            "keyword": "shocked",
+            "synonyms": [
+                "shocked"
+            ]
+        },
+        {
+            "keyword": "sleep",
+            "synonyms": [
+                "sleep"
+            ]
+        }
+    ]
+}

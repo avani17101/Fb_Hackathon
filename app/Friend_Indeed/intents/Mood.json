@@ -1,0 +1,8 @@
+{
+    "name": "Mood",
+    "entities": [
+        "Depressed:Depressed",
+        "Happy:Happy",
+        "suicidal:suicidal"
+    ]
+}

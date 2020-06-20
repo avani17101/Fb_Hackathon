@@ -1,0 +1,72 @@
+{
+    "name": "Happy",
+    "roles": [
+        "Happy"
+    ],
+    "lookups": [
+        "free-text",
+        "keywords"
+    ],
+    "keywords": [
+        {
+            "keyword": "Hopefull",
+            "synonyms": [
+                "hopefull"
+            ]
+        },
+        {
+            "keyword": "I feel good",
+            "synonyms": [
+                "i feel good"
+            ]
+        },
+        {
+            "keyword": "amazing",
+            "synonyms": [
+                "amazing"
+            ]
+        },
+        {
+            "keyword": "awesome",
+            "synonyms": [
+                "awesome"
+            ]
+        },
+        {
+            "keyword": "energetic",
+            "synonyms": [
+                "energetic"
+            ]
+        },
+        {
+            "keyword": "glad",
+            "synonyms": [
+                "glad"
+            ]
+        },
+        {
+            "keyword": "happy",
+            "synonyms": [
+                "happy"
+            ]
+        },
+        {
+            "keyword": "joyfull",
+            "synonyms": [
+                "joyfull"
+            ]
+        },
+        {
+            "keyword": "loving",
+            "synonyms": [
+                "loving"
+            ]
+        },
+        {
+            "keyword": "mind blowing",
+            "synonyms": [
+                "mind blowing"
+            ]
+        }
+    ]
+}

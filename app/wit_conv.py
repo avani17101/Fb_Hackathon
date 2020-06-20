@@ -14,4 +14,22 @@ def wit_response(message_text):
         pass
     return(entity, value)
 
-#print(wit_response("I am happyyy"))
+print(wit_response("I am happyyy"))
+# import requests
+
+# headers = {
+#     'Authorization': 'access_token',
+#     'Content-Type': 'application/json',
+# }
+
+# data = '{"doc":"I feel great",\n       "id":"Mood",\n       "values":[{"value":"happy",\n                  "expressions":["great"]}]}'
+
+# response = requests.post('http://curl', headers=headers, data=data)
+
+import requests
+
+headers = {
+    'Authorization': 'Bearer $access_token',
+}
+
+response = requests.get('http://curl//api.wit.ai/intents?v=20200513' , headers=headers)
