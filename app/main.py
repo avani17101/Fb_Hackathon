@@ -364,53 +364,54 @@ def send_message(recipient_id, text, message_rec):
             "message": {"text": "Pick a color:", "quick_replies": replies["color"]},
         }
     elif message_rec.get("quick_reply"):
-        if message_rec["quick_reply"]["payload"] == "red":
-            payload = {
-                "message": {"text": "You chose red"},
-                "recipient": {"id": recipient_id},
-                "notification_type": "regular",
-            }
-        elif message_rec["quick_reply"]["payload"] == "green":
-            payload = {
-                "message": {"text": "You chose green"},
-                "recipient": {"id": recipient_id},
-                "notification_type": "regular",
-            }
-        elif message_rec["quick_reply"]["payload"] == "good":
-            payload = {
-                "message": {"text": "We look forward to it!"},
-                "recipient": {"id": recipient_id},
-                "notification_type": "regular",
-            }
-        elif message_rec["quick_reply"]["payload"] == "medium":
-            payload = {
-                "message": {"text": "Thanks"},
-                "recipient": {"id": recipient_id},
-                "notification_type": "regular",
-            }
-        elif message_rec["quick_reply"]["payload"] == "bad":
-            payload = {
-                "message": {"text": "We promise to be better next time"},
-                "recipient": {"id": recipient_id},
-                "notification_type": "regular",
-            }
-        elif message_rec["quick_reply"]["payload"].startswith(("date","time","reminder")):
-            payload = book_appointment(message_rec["quick_reply"]["payload"], recipient_id, db)
+        payload = handle_quickreply(recipient_id, message_rec["quick_reply"]["payload"])
+        # if message_rec["quick_reply"]["payload"] == "red":
+        #     payload = {
+        #         "message": {"text": "You chose red"},
+        #         "recipient": {"id": recipient_id},
+        #         "notification_type": "regular",
+        #     }
+        # elif message_rec["quick_reply"]["payload"] == "green":
+        #     payload = {
+        #         "message": {"text": "You chose green"},
+        #         "recipient": {"id": recipient_id},
+        #         "notification_type": "regular",
+        #     }
+        # elif message_rec["quick_reply"]["payload"] == "good":
+        #     payload = {
+        #         "message": {"text": "We look forward to it!"},
+        #         "recipient": {"id": recipient_id},
+        #         "notification_type": "regular",
+        #     }
+        # elif message_rec["quick_reply"]["payload"] == "medium":
+        #     payload = {
+        #         "message": {"text": "Thanks"},
+        #         "recipient": {"id": recipient_id},
+        #         "notification_type": "regular",
+        #     }
+        # elif message_rec["quick_reply"]["payload"] == "bad":
+        #     payload = {
+        #         "message": {"text": "We promise to be better next time"},
+        #         "recipient": {"id": recipient_id},
+        #         "notification_type": "regular",
+        #     }
+        # elif message_rec["quick_reply"]["payload"].startswith(("date","time","reminder")):
+        #     payload = book_appointment(message_rec["quick_reply"]["payload"], recipient_id, db)
 
-        elif message_rec["quick_reply"]["payload"].startswith("reminder"):
-            payload = {
-                "recipient": {"id": recipient_id},
-                "message": {
-                    "attachment": {
-                        "type": "template",
-                        "payload": {
-                            "template_type": "one_time_notif_req",
-                            "title": 'Select "notify me" to confirm the reminder?',
-                            "payload": message_rec["quick_reply"]["payload"],
-                        },
-                    }
-                },
-            }
+        # elif message_rec["quick_reply"]["payload"].startswith("reminder"):
+        #     payload = {
+        #         "recipient": {"id": recipient_id},
+        #         "message": {
+        #             "attachment": {
+        #                 "type": "template",
+        #                 "payload": {
+        #                     "template_type": "one_time_notif_req",
+        #                     "title": 'Select "notify me" to confirm the reminder?',
+        #                     "payload": message_rec["quick_reply"]["payload"],
+        #                 },
+        #             }
+        #         },
+        #     }
     else:
         payload = {
             "message": {"text": text},

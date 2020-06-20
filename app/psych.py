@@ -1,7 +1,7 @@
 from .fb_requests import send_request
 
 def psych_send_message(text,recipient_id,message_rec,psych_id,db):
-	elif message_rec["text"] == "Display schedule":
+	if message_rec["text"] == "Display schedule":
 		psych_data = db.appointment.find({"therapist_id":psych_id})
 		slots_list={}
 		slot_dates = []
