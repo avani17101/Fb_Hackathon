@@ -28,6 +28,9 @@ notif_token = 0
 cur_slots = []
 available_slots = []
 reported_person = 0
+like_replies = ["like_yomama","like_chuck","like_programming","like_dad"]
+dislike_replies = ["dislike_yomama","dislike_chuck","dislike_programming","dislike_dad"]
+
 
 # We will receive messages that Facebook sends our bot at this endpoint
 def check_one_time_notif():
@@ -72,6 +75,10 @@ def check_id(id):
     check_user = db.user_status.find_one({"user": id})
     if check_user is None:
         db.user_status.insert_one({"user": id, "status": 0,"joke_calls":0})
+        db.joke_categories.insert_one({"user":id,"score0":20})
+        db.joke_categories.insert_one({"user":id,"score1":20})
+        db.joke_categories.insert_one({"user":id,"score2":20})
+        db.joke_categories.insert_one({"user":id,"score3":20})
         return 0
     else:
         return check_user["status"]
@@ -466,21 +473,25 @@ def send_message(recipient_id, text, message_rec):
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
-        elif message_rec["quick_reply"]["payload"] == "like":
-            cat = db.joke_categories.find_one({"joke_tag": 2})
-            db.joke_categories.update({"category":cat},{"$inc":{"score":float(20)}})
-            db.joke_categories.update_one({"category":cat},{"$set": {"joke_tag": 1}})
+        elif message_rec["quick_reply"]["payload"] in like_replies:
+            ind = like_replies.index(message_rec["quick_reply"]["payload"])
+            ind_cat = "score"+str(ind)
+            category_data = db.joke_categories.find({"user":recipient_id})
+            score = category_data[ind][ind_cat]
+            db.joke_categories.update_one({ind_cat:score},{"$inc": {ind_cat: float(20)}})
             payload = {
                 "message": {"text": "Glad you liked it!"},
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
-        elif message_rec["quick_reply"]["payload"] == "dislike":
-            cat = db.joke_categories.find_one({"joke_tag": 2})
-            db.joke_categories.update({"category":cat},{"$inc":{"score":float(-20)}})
-            db.joke_categories.update_one({"category":cat},{"$set": {"joke_tag": 1}})
+        elif message_rec["quick_reply"]["payload"] in dislike_replies:
+            ind = dislike_replies.index(message_rec["quick_reply"]["payload"])
+            ind_cat = "score"+str(ind)
+            category_data = db.joke_categories.find({"user":recipient_id})
+            score = category_data[ind][ind_cat]
+            db.joke_categories.update_one({ind_cat:score},{"$inc": {ind_cat: float(-20)}})
             payload = {
-                "message": {"text": "I'm so sorry!"},
+                "message": {"text": "I am so sorry!"},
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
@@ -500,6 +511,12 @@ def send_message(recipient_id, text, message_rec):
                         },
                     }
                 },
+            }
+        else:
+            payload = {
+            "message": {"text": "quick_reply_invalid"},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
             }
     else:
         payload = {
