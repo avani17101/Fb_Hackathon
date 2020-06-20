@@ -350,13 +350,28 @@ def talk_to_someone(recipient_id, text, message_rec):
                     "notification_type": "regular",
                 }
             return payload
-talk_to_asked=0
 
+def getYoga_displayed(recipient_id):
+    url = suggest_yoga()
+    payload = {
+            "message": {"text": "here is yoga aasan for you! url:"+str(url)},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        }
+    return payload
+
+talk_to_asked=0
+yoga_ask=0
 def send_message(recipient_id, text, message_rec):
     # sends user the text message provided via input response parameter
     """Send a response to Facebook"""
     entity, value = wit_response(message_rec["text"])
     global talk_to_asked
+    global yoga_ask
+    if(entity=='yes'and yoga_ask==1 ):
+        yoga_ask=0
+        payload = getYoga_displayed(recipient_id)
+
 
 
     if(entity=='yes' and talk_to_asked==1):
@@ -399,12 +414,16 @@ def send_message(recipient_id, text, message_rec):
             "notification_type": "regular",
         }
     if(entity== 'wantYoga'):
-        url = suggest_yoga()
+        payload = getYoga_displayed(recipient_id)
+
+    if(entity=='likedYoga'):
         payload = {
-            "message": {"text": "here is yoga aasan for you! url:"+str(url)},
+            "message": {"text": "It's good you liked it, would you like to do some more Aasan's now?"},
             "recipient": {"id": recipient_id},
             "notification_type": "regular",
-        }
+        } 
+        yoga_ask = 1
+
     if(entity== 'MusicListen'):
         url = suggest_songs()
         payload = {
