@@ -11,7 +11,7 @@ import datetime
 from .quick_replies import replies, generate_app_slots, generate_reminder_slots
 from apscheduler.schedulers.background import BackgroundScheduler
 from wit_conv import wit_response
-
+from conversation import *
 MONGO_URL = DB_URL
 
 app = Flask(__name__)
@@ -268,26 +268,13 @@ def verify_fb_token(token_sent):
     return "Invalid verification token"
 
 
-
-
-
-
 # chooses a random message to send to the user
 def get_message():
-    sample_responses = [
-        "You are a dirty fellow!",
-        "Of course I talk like an idiot. How else would u understand me?",
-        "I made a pencil with two erasers. It was pointless.",
-        "What's brown and sticky? A stick.",
-    ]
-    # return selected item to the user
-    return random.choice(sample_responses)
 
+    return "Hiii am in test mode"
 
-def send_message(recipient_id, text, message_rec):
-    # sends user the text message provided via input response parameter
-    """Send a response to Facebook"""
-    if message_rec["text"] == "Talk to someone":
+def talk_to_someone(recipient_id, text, message_rec):
+     if message_rec["text"] == "Talk to someone":
         user_name = (
             "Anonymous "
             + anonymous_usernames[random.randint(0, len(anonymous_usernames) - 1)]
@@ -358,6 +345,71 @@ def send_message(recipient_id, text, message_rec):
                     "recipient": {"id": recipient_id},
                     "notification_type": "regular",
                 }
+            return payload
+talk_to_asked=0
+
+def send_message(recipient_id, text, message_rec):
+    # sends user the text message provided via input response parameter
+    """Send a response to Facebook"""
+    entity, value = wit_response(message_rec["text"])
+    global talk_to_asked
+
+
+    if(entity=='yes' and talk_to_asked==1):
+        talk_to_asked=0
+        payload = talk_to_someone(recipient_id, text, message_rec)
+
+    if(entity=='No' and talk_to_asked==1):
+        # if possible this image url or random from a set https://www.happiness.com/en/uploads/monthly_2019_08/suicide-prevention-quotes.png.8871cc34504ac992dda77928ebb0e60e.png
+        payload = {
+                "message": {"text": "Okay, it's natural to feel you don't want to talk to anyone, but you know it always helps. Here is a qoute for you: “Soak up the views. Take in the bad weather and the good weather. You are not the storm.” Matt Haig"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+    
+    
+    if(entity=='Depressed'):
+        payload = {
+                "message": {"text": "I am here to listen to you, would you like to talk to your fellow buddy?"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+        talk_to_asked = 1
+
+
+    if(entity== 'suicidal'):
+        
+        payload = {
+            "message": {"text": "You know life is very precious and you are invalauble to me. I am here to listen to you, would you like to talk to your fellow buddy?"},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        }
+        talk_to_asked = 1
+
+        #if no: motivating quote, ask for yoga(intent WantYoga)/music(intent MusicListen)
+    
+    if(entity =='happy'):
+        payload = {
+            "message": {"text": "That's so good, do remain happy, it's the purpose of life"},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        }
+    if(entity== 'wantYoga'):
+        url = suggest_yoga()
+        payload = {
+            "message": {"text": "here is yoga aasan for you! url:"+str(url)},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        }
+    if(entity== 'MusicListen'):
+        url = suggest_music()
+        payload = {
+            "message": {"text": "here is music for you! url:"+str(url)},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        }
+       
+   
     elif message_rec["text"] == "Book an appointment":
         cur_slots = []
         available_slots = []
