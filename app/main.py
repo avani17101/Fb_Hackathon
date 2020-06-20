@@ -402,7 +402,7 @@ def send_message(recipient_id, text, message_rec):
             "notification_type": "regular",
         }
     if(entity== 'MusicListen'):
-        url = suggest_music()
+        url = suggest_songs()
         payload = {
             "message": {"text": "here is music for you! url:"+str(url)},
             "recipient": {"id": recipient_id},
