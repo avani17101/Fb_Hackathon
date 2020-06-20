@@ -2,10 +2,7 @@ from .fb_requests import *
 from .random_message import *
 from .book_appointment import *
 from .talk_to_someone import *
-from .handle_optin import *
-from .handle_postback import *
 from .handle_quickreply import *
-from .handle_normal_message import *
 from .quick_replies import *
 from .utils import *
 
@@ -16,6 +13,8 @@ def send_message(db, recipient_id, text, message_rec):
         payload = talk_to_someone(recipient_id, db)
     elif message_rec["text"] == "Book an appointment":
         payload = book_appointment("", recipient_id, db)
+    elif message_rec["text"] == "Get a joke":
+        payload = jokes_util(recipient_id,db)
     elif message_rec["text"] == "color":
         payload = {
             "recipient": {"id": recipient_id},
