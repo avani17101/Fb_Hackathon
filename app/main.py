@@ -466,6 +466,24 @@ def send_message(recipient_id, text, message_rec):
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
+        elif message_rec["quick_reply"]["payload"] == "like":
+            cat = db.joke_categories.find_one({"joke_tag": 2})
+            db.joke_categories.update({"category":cat},{"$inc":{"score":float(20)}})
+            db.joke_categories.update_one({"category":cat},{"$set": {"joke_tag": 1}})
+            payload = {
+                "message": {"text": "Glad you liked it!"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+        elif message_rec["quick_reply"]["payload"] == "dislike":
+            cat = db.joke_categories.find_one({"joke_tag": 2})
+            db.joke_categories.update({"category":cat},{"$inc":{"score":float(-20)}})
+            db.joke_categories.update_one({"category":cat},{"$set": {"joke_tag": 1}})
+            payload = {
+                "message": {"text": "I'm so sorry!"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
         elif message_rec["quick_reply"]["payload"].startswith(("date","time","reminder")):
             payload = book_appointment(message_rec["quick_reply"]["payload"], recipient_id, db)
 

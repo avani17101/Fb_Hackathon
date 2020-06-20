@@ -72,5 +72,19 @@ replies = {
                 "payload":"bad",
                 "image_url":"https://images-eu.ssl-images-amazon.com/images/I/31oIZDvTgFL._SY300_QL70_ML2_.jpg"
             }
+    ],
+    "jokes": 
+    [
+            {
+                "content_type":"text",
+                "title":"👍",
+                "payload":"like",
+                "image_url":"https://images-eu.ssl-images-amazon.com/images/I/31oIZDvTgFL._SY300_QL70_ML2_.jpg"
+            },{
+                "content_type":"text",
+                "title":"👎",
+                "payload":"dislike",
+                "image_url":"https://lh3.googleusercontent.com/proxy/4thAzIZQcMhIFwcHQbN6j6OwzoyC-UyHmtxXCn-t5fOMgzZd7oAy4SAfSFMSZDcw1aBjSotVXnw2HDg3v6JKFqahdqu77yFtcqKPJ8iIFWAYLw"
+            }
     ]
 }
