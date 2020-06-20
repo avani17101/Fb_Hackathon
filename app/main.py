@@ -5,7 +5,7 @@ import os
 from flask import Flask, request
 from flask_pymongo import pymongo
 from .config import ACCTOKEN, VERTOKEN, DB_URL
-from .data import anonymous_usernames
+from .data import *
 from .handle_standby import *
 from .fb_requests import *
 from .psych import *
@@ -22,6 +22,7 @@ from .handle_normal_message import *
 from .random_message import *
 from .send_message import *
 
+from .utils import *
 
 MONGO_URL = DB_URL
 
@@ -45,6 +46,20 @@ def check_one_time_notif():
             "message": {"text": "You have an appointment at " + i["app_time"]},
         }
         send_request(payload)
+def check_appointment():
+    time_now = datetime.datetime.now().strftime("%H:%M")
+    date_now = datetime.datetime.now().strftime("%d.%m.%Y")
+    #print ("yay")
+    print (time_now,date_now)
+    for i in db.appointment.find({"time":time_now,"date":date_now,"appointment_status":"1"}):
+        therapist = i["therapist_id"]
+        user = i["appointed_id"]
+        db.user_status.update_one({"user":user},{"$set":{"status":30}})
+        db.user_status.update_one({"_id":therapist},{"$set":{"status":91}})
+        therapist_id = (db.user_status.find_one({"_id":therapist}))["user"]
+        print (therapist_id,user)
+        db.paired_peeps.insert_one({"fp": therapist_id, "sp": user, "timestamp_fp" : datetime.datetime.now(),"timestamp_sp" : datetime.datetime.now()})
+
 
 def one_minute_jobs():
     minute_delta = datetime.timedelta(hours=0, minutes=1, seconds=0)
@@ -65,7 +80,7 @@ def one_minute_jobs():
 def check_id(id):
     check_user = db.user_status.find_one({"user": id})
     if check_user is None:
-        db.user_status.insert_one({"user": id, "status": 0})
+        db.user_status.insert_one({"user": id, "status": 0,"joke_calls":0})
         return 0
     else:
         return check_user["status"]
@@ -79,6 +94,10 @@ sched = BackgroundScheduler()
 sched.add_job(one_minute_jobs, "cron", minute="0-59")
 sched.start()
 
+sched2 = BackgroundScheduler()
+sched2.add_job(check_appointment, "cron", minute="0,30")
+sched2.start()
+
 @app.route("/main", methods=["GET", "POST"])
 def receive_message():
     if request.method == "GET":
@@ -91,7 +110,7 @@ def receive_message():
     else:
         # get whatever message a user sent the bot
         output = request.get_json()
-        print(output)
+        #print(output)
         for event in output["entry"]:
             if (event.get("messaging")):
                 messaging = event["messaging"]

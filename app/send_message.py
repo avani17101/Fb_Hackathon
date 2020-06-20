@@ -7,6 +7,7 @@ from .handle_postback import *
 from .handle_quickreply import *
 from .handle_normal_message import *
 from .quick_replies import *
+from .utils import *
 
 def send_message(db, recipient_id, text, message_rec):
     # sends user the text message provided via input response parameter
@@ -21,6 +22,8 @@ def send_message(db, recipient_id, text, message_rec):
             "messaging_type": "RESPONSE",
             "message": {"text": "Pick a color:", "quick_replies": replies["color"]},
         }
+    elif message_rec["text"] == "Get a joke":
+        payload = jokes_util(recipient_id,db)
     elif message_rec.get("quick_reply"):
         payload = handle_quickreply(db, recipient_id, message_rec["quick_reply"]["payload"])
     else:
