@@ -464,11 +464,21 @@ def send_message(recipient_id, text, message_rec):
         # fetch spotify username
         spotifyusername = "avani"
         url = get_spotify_url(spotifyusername,moodint)
-        payload = {
-            "message": {"text": "here is music for you! url:"+str(url)},
+        # payload = {
+        #     "message": {"text": "here is music for you! url:"+str(url)},
+        #     "recipient": {"id": recipient_id},
+        #     "notification_type": "regular",
+        # }
+        payload = { "message":{
+        "attachment":{
+        "type":"video", 
+        "payload":{
+            "url":str(url), 
             "recipient": {"id": recipient_id},
             "notification_type": "regular",
         }
+        }}}
+        
     if(spotify_acc_prompt==1):
         music=1
         moodint = 1
