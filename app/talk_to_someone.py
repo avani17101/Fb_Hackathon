@@ -1,6 +1,7 @@
-from .data import anonymous_usernames
+from .data import *
 from .fb_requests import *
 from .send_message import *
+
 
 def sorry_text(db,minute_delta):
     for i in db.pool.find({}):
@@ -14,9 +15,10 @@ def sorry_text(db,minute_delta):
             send_request(payload)
 
 def talk_to_someone(recipient_id, db):
+    userind = random.randint(0, len(anonymous_usernames) - 1)
     user_name = (
         "Anonymous "
-        + anonymous_usernames[random.randint(0, len(anonymous_usernames) - 1)]
+        + anonymous_usernames[userind]
     )
     pool = db.pool.find({})
     print(user_name)
@@ -26,6 +28,7 @@ def talk_to_someone(recipient_id, db):
             "id": recipient_id,
             "timestamp": datetime.datetime.now(),
             "username": user_name,
+            "image_url": persona_urls[userind]
         }
         db.pool.insert_one(temp_pool)
         
@@ -41,12 +44,13 @@ def talk_to_someone(recipient_id, db):
         print("Someone is there in pool")
         partner_id = pool[0]["id"]
         partner_username = pool[0]["username"]
+        partner_pic = pool[0]["image_url"]
         if partner_id != recipient_id:
             # pool[:] = []
             db.pool.remove({"id" : partner_id})
             persona_id_self = send_persona_request({
                 "name":user_name,
-                "profile_picture_url":"https://image.shutterstock.com/image-photo/young-girl-making-funny-faces-260nw-343761566.jpg"
+                "profile_picture_url": persona_urls[userind]
                 })
             payload_partner = {
                 "message": {
@@ -58,7 +62,7 @@ def talk_to_someone(recipient_id, db):
             }
             persona_id = send_persona_request({
                 "name":partner_username,
-                "profile_picture_url":"https://image.shutterstock.com/image-photo/young-girl-making-funny-faces-260nw-343761566.jpg"
+                "profile_picture_url": partner_pic
                 })
             payload = {
                 "message": {

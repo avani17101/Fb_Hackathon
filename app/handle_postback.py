@@ -7,7 +7,7 @@ def handle_postback(db, recipient_id, postback):
     temp_dict["text"] = ""
     if payload in ['harass', 'rude', 'troll']:
         db.user_status.update_one({"user": recipient_id}, {"$set": {"status": 11}})
-        send_message(recipient_id, "We are putting you through live chat with one of the admins. Explain your isssue so that we can take necessary steps.", temp_dict)
+        send_message(db, recipient_id, "We are putting you through live chat with one of the admins. Explain your isssue so that we can take necessary steps.", temp_dict)
         handover_payload = {
             "target_app_id": 263902037430900,
             "recipient":{"id":recipient_id},

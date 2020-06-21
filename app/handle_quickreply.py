@@ -1,4 +1,6 @@
 from .book_appointment import *
+like_replies = ["like_yomama","like_chuck","like_programming","like_dad"]
+dislike_replies = ["dislike_yomama","dislike_chuck","dislike_programming","dislike_dad"]
 
 def handle_quickreply(db, recipient_id, qreply):
     if qreply == "red":
@@ -31,8 +33,8 @@ def handle_quickreply(db, recipient_id, qreply):
             "recipient": {"id": recipient_id},
             "notification_type": "regular",
         }
-    elif message_rec["quick_reply"]["payload"] in like_replies:
-            ind = like_replies.index(message_rec["quick_reply"]["payload"])
+    elif qreply in like_replies:
+            ind = like_replies.index(qreply)
             ind_cat = "score"+str(ind)
             category_data = db.joke_categories.find({"user":recipient_id})
             score = category_data[ind][ind_cat]
@@ -42,8 +44,8 @@ def handle_quickreply(db, recipient_id, qreply):
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
-    elif message_rec["quick_reply"]["payload"] in dislike_replies:
-        ind = dislike_replies.index(message_rec["quick_reply"]["payload"])
+    elif qreply in dislike_replies:
+        ind = dislike_replies.index(qreply)
         ind_cat = "score"+str(ind)
         category_data = db.joke_categories.find({"user":recipient_id})
         score = category_data[ind][ind_cat]
@@ -53,10 +55,10 @@ def handle_quickreply(db, recipient_id, qreply):
             "recipient": {"id": recipient_id},
             "notification_type": "regular",
         }
-    elif message_rec["quick_reply"]["payload"].startswith(("date","time","reminder")):
-        payload = book_appointment(message_rec["quick_reply"]["payload"], recipient_id, db)
+    elif qreply.startswith(("date","time","reminder")):
+        payload = book_appointment(qreply, recipient_id, db)
 
-    # elif message_rec["quick_reply"]["payload"].startswith("reminder"):
+    # elif qreply.startswith("reminder"):
     #     payload = {
     #         "recipient": {"id": recipient_id},
     #         "message": {
@@ -65,7 +67,7 @@ def handle_quickreply(db, recipient_id, qreply):
     #                 "payload": {
     #                     "template_type": "one_time_notif_req",
     #                     "title": 'Select "notify me" to confirm the reminder?',
-    #                     "payload": message_rec["quick_reply"]["payload"],
+    #                     "payload": qreply,
     #                 },
     #             }
     #         },

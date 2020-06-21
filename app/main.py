@@ -81,6 +81,10 @@ def check_id(id):
     check_user = db.user_status.find_one({"user": id})
     if check_user is None:
         db.user_status.insert_one({"user": id, "status": 0,"joke_calls":0})
+        db.joke_categories.insert_one({"user":id,"score0":20})
+        db.joke_categories.insert_one({"user":id,"score1":20})
+        db.joke_categories.insert_one({"user":id,"score2":20})
+        db.joke_categories.insert_one({"user":id,"score3":20})
         return 0
     else:
         return check_user["status"]
@@ -110,7 +114,7 @@ def receive_message():
     else:
         # get whatever message a user sent the bot
         output = request.get_json()
-        #print(output)
+        print(output)
         for event in output["entry"]:
             if (event.get("messaging")):
                 messaging = event["messaging"]
@@ -125,7 +129,34 @@ def receive_message():
                         elif message.get("optin"):
                             handle_optin(db, recipient_id, message["optin"])
                     elif status//10==9:
-                        psych_init(db,recipient_id,message)
+                        if (status%10==1):
+                            cur_speaker = ""
+                            persona_id_cur = ""
+                            person = db.paired_peeps.find_one({"fp": message["sender"]["id"]})
+                            if message.get("message"):
+                                response_sent_text = message["message"]["text"]
+                                if (response_sent_text=="/end"):
+                                    db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
+                                    db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
+                                    db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 90}})
+                                    payload = {
+                                    "recipient": {"id": person["fp"]},
+                                    "notification_type": "regular",
+                                    "message": {
+                                        "text": "The chat ended. Thank you for your time!"
+                                    },
+                                    }
+                                else:
+                                    payload = {
+                                        "recipient": {"id": person["sp"]},
+                                        "notification_type": "regular",
+                                        "message": {
+                                            "text": response_sent_text
+                                        }
+                                    }
+                                send_request(payload)
+                        else:
+                            psych_init(db,recipient_id,message)
                     elif status//10 == 1:
                         if status % 10 == 0:
                             cur_speaker = ""
@@ -228,7 +259,33 @@ def receive_message():
                             db.user_status.update_one({"user": message["sender"]["id"]}, {"$set": {"status": 0}})
                             if message.get("message"):
                                 print(message["message"]["text"])
-                            
+                    elif status//10==3:
+                        cur_speaker = ""
+                        persona_id_cur = ""
+                        person = db.paired_peeps.find_one({"sp": message["sender"]["id"]})
+                        print(person)
+                        if message.get("message"):
+                            response_sent_text = message["message"]["text"]
+                            if (response_sent_text=="/end"):
+                                db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
+                                db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
+                                db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 90}})
+                                payload = {
+                                "recipient": {"id": person["sp"]},
+                                "notification_type": "regular",
+                                "message": {
+                                    "text": "The chat ended. Hope we could help you."
+                                },
+                                }
+                            else:
+                                payload = {
+                                        "recipient": {"id": person["fp"]},
+                                        "notification_type": "regular",
+                                        "message": {
+                                            "text": response_sent_text
+                                        }
+                                    }
+                            send_request(payload)    
             elif (event.get("standby")):
                 handle_standby(event["standby"])
     return "Message Processed"
