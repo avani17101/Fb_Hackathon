@@ -368,12 +368,16 @@ def getYoga_displayed(recipient_id):
 
 talk_to_asked=0
 yoga_ask=0
+music = 0
+spotify_acc_prompt = 0
 def send_message(recipient_id, text, message_rec):
     # sends user the text message provided via input response parameter
     """Send a response to Facebook"""
     entity, value = wit_response(message_rec["text"])
     global talk_to_asked
     global yoga_ask
+    global music
+    global spotify_acc_prompt
     if(entity=='yes'and yoga_ask==1 ):
         yoga_ask=0
         payload = getYoga_displayed(recipient_id)
@@ -443,14 +447,38 @@ def send_message(recipient_id, text, message_rec):
         } 
         yoga_ask = 1
 
-    if(entity== 'MusicListen'):
-        # url = suggest_songs()
-        url = get_spotify_url()
+    if(music==1):
+        music=0
+        moodint = 1
+        # fetch spotify username
+        spotifyusername = "avani"
+        url = get_spotify_url(spotifyusername,moodint)
         payload = {
             "message": {"text": "here is music for you! url:"+str(url)},
             "recipient": {"id": recipient_id},
             "notification_type": "regular",
         }
+    if(spotify_acc_prompt==1):
+        music=1
+        moodint = 1
+        spotify_acc_prompt = 0
+        #assume yes for now  #if no call suggest_songs()
+        payload = {
+            "message": {"text": "please tell your spotify username"},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        }
+
+
+    if(entity== 'MusicListen'):
+        spotify_acc_prompt = 1
+        # url = suggest_songs()
+        payload = {
+            "message": {"text": "Do you have a spotify user-account?"},
+            "recipient": {"id": recipient_id},
+            "notification_type": "regular",
+        }
+
        
     if(entity=="hatespeech" or entity=="threat" or entity=="privacyViolation"):
         # end connection: not implemented yet

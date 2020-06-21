@@ -21,19 +21,17 @@ from .conversation import suggest_songs
 #         - API: Create a Playlist
 #         - API: Add Tracks to a Playlist
 #         - Scope: playlist-modify-public
-def get_spotify_url():
+def get_spotify_url(spotifyusername,moodint):
     client_id = SPOTIFY_CLIENT_ID
     client_secret = SPOTIFY_CLIENT_SECRET
     redirect_uri = SPOTIFY_REDIRECT_URI
 
     scope = 'user-library-read user-top-read playlist-modify-public user-follow-read'
 
-    if len(sys.argv) > 1:
-        username = sys.argv[1]
-        mood = float(sys.argv[2])
-    else:
-        print("Usage: %s username" % (sys.argv[0],))
-        sys.exit()
+   
+    username = spotifyusername
+    mood = moodint
+
 
     token = util.prompt_for_user_token(username, scope, client_id, client_secret, redirect_uri)
 
