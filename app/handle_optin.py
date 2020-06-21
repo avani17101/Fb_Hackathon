@@ -7,6 +7,7 @@ def handle_optin(db, recipient_id, optin):
     temp_dict["text"] = ""
     if payload == "notif":
         send_message(
+            db,
             recipient_id,
             "One time notif token: " + str(optin["one_time_notif_token"]),
             temp_dict,
@@ -21,5 +22,5 @@ def handle_optin(db, recipient_id, optin):
         }
         db.one_time_notif.insert_one(one_time_notif_dict)
         send_message(
-            recipient_id, "You will be notified at " + payload_list[2]+ " on "+payload_list[1], temp_dict,
+            db, recipient_id, "You will be notified at " + payload_list[2]+ " on "+payload_list[1], temp_dict,
         )

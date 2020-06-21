@@ -60,6 +60,7 @@ def talk_to_someone(recipient_id, db):
                 "notification_type": "regular",
                 "persona_id": persona_id_self
             }
+            send_request(payload_partner)
             persona_id = send_persona_request({
                 "name":partner_username,
                 "profile_picture_url": partner_pic
@@ -80,7 +81,7 @@ def talk_to_someone(recipient_id, db):
 
             db.user_status.update_one({"user": partner_id}, {"$set": {"status": 10}})
             db.paired_peeps.insert_one({"fp": recipient_id, "sp": partner_id, "persona_id_sp": persona_id,"persona_id_fp": persona_id_self,"timestamp_fp" : datetime.datetime.now(),"timestamp_sp" : datetime.datetime.now()})
-            send_request(payload_partner)
+            
             return payload
         else:
             payload = {

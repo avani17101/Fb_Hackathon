@@ -139,12 +139,20 @@ def receive_message():
                                     db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
                                     db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
                                     db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 90}})
+                                    payload_partner = {
+                                        "message": {
+                                            "text": "The chat ended. Hope we could help you."
+                                        },
+                                        "recipient": {"id": person["sp"]},
+                                        "notification_type": "regular"
+                                    }
+                                    send_request(payload_partner)
                                     payload = {
-                                    "recipient": {"id": person["fp"]},
-                                    "notification_type": "regular",
-                                    "message": {
-                                        "text": "The chat ended. Thank you for your time!"
-                                    },
+                                        "recipient": {"id": person["fp"]},
+                                        "notification_type": "regular",
+                                        "message": {
+                                            "text": "The chat ended. Thank you for your time!"
+                                        },
                                     }
                                 else:
                                     payload = {
@@ -270,12 +278,20 @@ def receive_message():
                                 db.paired_peeps.remove({"fp":person["fp"],"sp":person["sp"]})
                                 db.user_status.update_one({"user": person["sp"]}, {"$set": {"status": 0}})
                                 db.user_status.update_one({"user": person["fp"]}, {"$set": {"status": 90}})
+                                payload_partner = {
+                                    "message": {
+                                        "text": "Thank you for your time!!! "
+                                    },
+                                    "recipient": {"id": person["fp"]},
+                                    "notification_type": "regular"
+                                }
+                                send_request(payload_partner)
                                 payload = {
-                                "recipient": {"id": person["sp"]},
-                                "notification_type": "regular",
-                                "message": {
-                                    "text": "The chat ended. Hope we could help you."
-                                },
+                                    "recipient": {"id": person["sp"]},
+                                    "notification_type": "regular",
+                                    "message": {
+                                        "text": "The chat ended. Hope we could help you."
+                                    },
                                 }
                             else:
                                 payload = {
