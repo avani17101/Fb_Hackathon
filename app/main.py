@@ -17,6 +17,7 @@ import json
 import random
 from imdb import IMDb
 from .movie_recommender import get_movies
+from .moodtape import *
 MONGO_URL = DB_URL
 
 app = Flask(__name__)
@@ -377,6 +378,12 @@ def send_message(recipient_id, text, message_rec):
         yoga_ask=0
         payload = getYoga_displayed(recipient_id)
 
+    if(entity == 'Location'):
+            payload = {
+                "message": {"text": "I have stored your location"},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
 
 
     if(entity=='yes' and talk_to_asked==1):
@@ -437,7 +444,8 @@ def send_message(recipient_id, text, message_rec):
         yoga_ask = 1
 
     if(entity== 'MusicListen'):
-        url = suggest_songs()
+        # url = suggest_songs()
+        url = get_spotify_url()
         payload = {
             "message": {"text": "here is music for you! url:"+str(url)},
             "recipient": {"id": recipient_id},
