@@ -15,6 +15,8 @@ from .conversation import *
 from .quotes import fetch_quote
 import json
 import random
+from imdb import IMDb
+from .movie_recommender import get_movies
 MONGO_URL = DB_URL
 
 app = Flask(__name__)
@@ -398,7 +400,14 @@ def send_message(recipient_id, text, message_rec):
             }
         talk_to_asked = 1
 
-
+    if(entity=='movie'):
+        movie = get_movies()
+        payload = {
+                "message": {"text": "Here is an amazing movie for you. Do watch and tell how it is :)"+movie},
+                "recipient": {"id": recipient_id},
+                "notification_type": "regular",
+            }
+    
     if(entity== 'suicidal'):
         
         payload = {
