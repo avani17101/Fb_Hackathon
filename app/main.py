@@ -12,6 +12,9 @@ from .quick_replies import replies, generate_app_slots, generate_reminder_slots
 from apscheduler.schedulers.background import BackgroundScheduler
 from .wit_conv import wit_response
 from .conversation import *
+from .quotes import fetch_quote
+import json
+import random
 MONGO_URL = DB_URL
 
 app = Flask(__name__)
@@ -379,9 +382,9 @@ def send_message(recipient_id, text, message_rec):
         payload = talk_to_someone(recipient_id, text, message_rec)
 
     if(entity=='No' and talk_to_asked==1):
-        # if possible this image url or random from a set https://www.happiness.com/en/uploads/monthly_2019_08/suicide-prevention-quotes.png.8871cc34504ac992dda77928ebb0e60e.png
+        quote = fetch_quote()
         payload = {
-                "message": {"text": "Okay, it's natural to feel you don't want to talk to anyone, but you know it always helps. Here is a qoute for you: “Soak up the views. Take in the bad weather and the good weather. You are not the storm.” Matt Haig"},
+                "message": {"text": "Okay, it's natural to feel you don't want to talk to anyone, but you know it always helps. Here is a qoute for you"+quote},
                 "recipient": {"id": recipient_id},
                 "notification_type": "regular",
             }
