@@ -359,11 +359,22 @@ def talk_to_someone(recipient_id, text, message_rec):
 
 def getYoga_displayed(recipient_id):
     url = suggest_yoga()
-    payload = {
-            "message": {"text": "here is yoga aasan for you! url:"+str(url)},
-            "recipient": {"id": recipient_id},
-            "notification_type": "regular",
-        }
+    # payload = {
+    #         "message": {"text": "here is yoga aasan for you! url:"+str(url)},
+    #         "recipient": {"id": recipient_id},
+    #         "notification_type": "regular",
+    #     }
+    
+
+    payload = { "message":{
+    "attachment":{
+      "type":"video", 
+      "payload":{
+        "url":str(url), 
+        "recipient": {"id": recipient_id},
+        "notification_type": "regular",
+      }
+    }}}
     return payload
 
 talk_to_asked=0
